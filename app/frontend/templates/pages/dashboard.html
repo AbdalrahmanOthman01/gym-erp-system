@@ -28,11 +28,17 @@
             </div>
             
             <div class="flex items-center space-x-3 mt-4 sm:mt-0" x-show="member">
-                {% if current_user.role.value == 'superadmin' %}
-                <!-- Superadmin Admin Actions -->
-                <button @click="openPlanEditModal()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded text-sm font-medium transition flex items-center shadow-lg">
-                    <i class="fa-solid fa-pen-to-square mr-2"></i> Edit Plan
+                <!-- Edit Details (Visible to Superadmin & Accountant) -->
+                <button @click="openDemographicsEditModal()" class="bg-[#1c1e24] hover:bg-[#252830] text-white border border-borderMuted px-4 py-2 rounded text-sm font-medium transition flex items-center shadow-lg">
+                    <i class="fa-solid fa-user-pen mr-2 text-gray-400"></i> Edit Details
                 </button>
+                <!-- Edit Plan (Visible to Superadmin & Accountant for renewals) -->
+                <button @click="openPlanEditModal()" class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded text-sm font-medium transition flex items-center shadow-lg">
+                    <i class="fa-solid fa-pen-to-square mr-2"></i> Edit Plan / Renew
+                </button>
+                
+                {% if current_user.role.value == 'superadmin' %}
+                <!-- Freeze & Block (Superadmin only) -->
                 <button @click="toggleFreeze()" :class="member.status === 'frozen' ? 'bg-green-600 hover:bg-green-500' : 'bg-amber-600 hover:bg-amber-500'" 
                         class="text-white px-4 py-2 rounded text-sm font-medium transition flex items-center shadow-lg">
                     <i class="fa-solid fa-snowflake mr-2"></i>
@@ -174,8 +180,8 @@
             </div>
         </div>
 
-        <!-- 4 Top Telemetry Widgets -->
-        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <!-- Telemetry Widgets -->
+        <div class="grid grid-cols-2 {% if current_user.role.value == 'superadmin' %}lg:grid-cols-4{% else %}lg:grid-cols-2{% endif %} gap-4 mb-6">
             <div class="bg-panel border border-borderMuted rounded-xl p-5 shadow-sm">
                 <p class="text-xs text-gray-400 font-medium">Active Members</p>
                 <div class="mt-2 flex items-end justify-between">
@@ -196,6 +202,7 @@
                 </div>
             </div>
 
+            {% if current_user.role.value == 'superadmin' %}
             <div class="bg-panel border border-borderMuted rounded-xl p-5 shadow-sm">
                 <p class="text-xs text-gray-400 font-medium">Revenue Today</p>
                 <div class="mt-2 flex items-end justify-between">
@@ -221,6 +228,7 @@
                     </div>
                 </div>
             </div>
+            {% endif %}
         </div>
 
         <!-- MAIN DASHBOARD BODY SPLIT -->
@@ -256,13 +264,15 @@
                     </div>
                 </div>
 
-                <!-- Demographics Doughnut (Visible to SuperAdmin/All in dynamic rendering checks) -->
+                <!-- Demographics Doughnut (Visible to SuperAdmin only) -->
+                {% if current_user.role.value == 'superadmin' %}
                 <div class="bg-panel border border-borderMuted rounded-xl p-5">
                     <h4 class="text-sm font-semibold text-white mb-4">Member Gender Distribution Split</h4>
                     <div class="h-40 relative">
                         <canvas id="pieDemo"></canvas>
                     </div>
                 </div>
+                {% endif %}
             </div>
 
             <!-- RIGHT PANEL: CHECKIN DESK TERMINAL & LIVE LOG FEED -->
@@ -309,11 +319,13 @@
                                     class="text-sm font-semibold transition">
                                 Live Feed
                             </button>
+                            {% if current_user.role.value == 'superadmin' %}
                             <button @click="activeTab = 'revenue'" 
                                     :class="activeTab === 'revenue' ? 'text-white border-b-2 border-brandRed font-bold pb-1' : 'text-gray-500 hover:text-gray-300 pb-1'" 
                                     class="text-sm font-semibold transition">
                                 Revenue History
                             </button>
+                            {% endif %}
                         </div>
                         <span x-show="activeTab === 'feed'" class="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse"></span>
                     </div>
@@ -339,6 +351,7 @@
                     </div>
 
                     <!-- Tab 2: Revenue History -->
+                    {% if current_user.role.value == 'superadmin' %}
                     <div x-show="activeTab === 'revenue'" class="space-y-4 overflow-y-auto max-h-[400px] flex-grow pr-2" style="display: none;">
                         <template x-for="item in stats.recent_revenue" :key="item.id">
                             <div class="flex items-start space-x-3 text-xs border-b border-borderMuted/30 pb-3">
@@ -360,6 +373,7 @@
                             No recent transactions found.
                         </div>
                     </div>
+                    {% endif %}
                 </div>
             </div>
 
@@ -379,7 +393,7 @@
                 <!-- Select Plan Tier -->
                 <div>
                     <label class="block text-sm text-gray-300 font-medium mb-1.5">Select Membership Plan</label>
-                    <select x-model="editPlanForm.plan_id" required class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-2.5 outline-none focus:border-brandRed">
+                    <select x-model="editPlanForm.plan_id" @change="onPlanEditChange()" required class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-2.5 outline-none focus:border-brandRed">
                         <template x-for="p in plans" :key="p.id">
                             <option :value="p.id" x-text="p.name + ' (' + p.price + ' EGP)'" :selected="p.id === editPlanForm.plan_id"></option>
                         </template>
@@ -424,6 +438,59 @@
             </form>
         </div>
     </div>
+
+    <!-- Edit Demographics Modal -->
+    <div class="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" x-show="showDemographicsModal" x-transition style="display: none;">
+        <div class="bg-panel border border-borderMuted rounded-xl p-6 w-full max-w-lg shadow-2xl space-y-4">
+            <div class="flex justify-between items-center pb-2 border-b border-b-borderMuted">
+                <h3 class="text-lg font-bold text-white"><i class="fa-solid fa-user-pen mr-2 text-brandRed"></i> Edit Member Details</h3>
+                <button @click="showDemographicsModal = false" class="text-gray-400 hover:text-white transition"><i class="fa-solid fa-xmark"></i></button>
+            </div>
+            
+            <form @submit.prevent="submitDemographicsEdit()" class="space-y-4 text-sm text-gray-300">
+                <!-- Full Name -->
+                <div>
+                    <label class="block text-sm text-gray-300 font-medium mb-1.5">Full Name</label>
+                    <input type="text" x-model="editDemoForm.full_name" required class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-2.5 outline-none focus:border-brandRed">
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <!-- Phone -->
+                    <div>
+                        <label class="block text-sm text-gray-300 font-medium mb-1.5">Phone Number</label>
+                        <input type="text" x-model="editDemoForm.phone" required class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-2.5 outline-none focus:border-brandRed">
+                    </div>
+                    <!-- Gender -->
+                    <div>
+                        <label class="block text-sm text-gray-300 font-medium mb-1.5">Gender</label>
+                        <select x-model="editDemoForm.gender" required class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-2.5 outline-none focus:border-brandRed">
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 gap-4">
+                    <!-- Weight -->
+                    <div>
+                        <label class="block text-sm text-gray-300 font-medium mb-1.5">Weight (kg)</label>
+                        <input type="number" step="0.1" x-model.number="editDemoForm.weight" class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-2.5 outline-none focus:border-brandRed">
+                    </div>
+                </div>
+
+                <!-- Notes -->
+                <div>
+                    <label class="block text-sm text-gray-300 font-medium mb-1.5">Notes / Medical / Goals</label>
+                    <textarea rows="3" x-model="editDemoForm.notes" class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-2.5 outline-none focus:border-brandRed"></textarea>
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-4 border-t border-borderMuted">
+                    <button type="button" @click="showDemographicsModal = false" class="px-4 py-2 text-sm text-gray-400 bg-sidebar border border-borderMuted hover:bg-opacity-80 rounded transition">Cancel</button>
+                    <button type="submit" class="bg-brandRed hover:bg-brandRed-hover text-white px-5 py-2 rounded text-sm font-semibold transition">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
 </div>
 {% endblock %}
 
@@ -456,6 +523,14 @@
                 remaining_sessions: '',
                 paid_amount: 0,
                 balance: 0
+            },
+            showDemographicsModal: false,
+            editDemoForm: {
+                full_name: '',
+                phone: '',
+                gender: 'male',
+                weight: null,
+                notes: ''
             },
 
             init() {
@@ -581,13 +656,78 @@
                     await this.fetchPlans();
                 }
                 if (this.member) {
-                    this.editPlanForm.plan_id = this.member.plan_id;
-                    this.editPlanForm.start_date = this.member.start_date;
-                    this.editPlanForm.end_date = this.member.end_date;
-                    this.editPlanForm.remaining_sessions = this.member.remaining_sessions === 'Unlimited' ? null : this.member.remaining_sessions;
-                    this.editPlanForm.paid_amount = this.member.paid_amount;
-                    this.editPlanForm.balance = this.member.balance;
+                    this.editPlanForm.plan_id = this.member.plan_id || (this.plans.length > 0 ? this.plans[0].id : '');
+                    this.editPlanForm.start_date = this.member.start_date && this.member.start_date !== 'N/A' ? this.member.start_date : new Date().toISOString().split('T')[0];
+                    
+                    let defaultDuration = 30;
+                    if (this.editPlanForm.plan_id) {
+                        const selectedPlan = this.plans.find(x => x.id === this.editPlanForm.plan_id);
+                        if (selectedPlan && selectedPlan.duration_days) {
+                            defaultDuration = selectedPlan.duration_days;
+                        }
+                    }
+                    let endD = new Date(this.editPlanForm.start_date);
+                    endD.setDate(endD.getDate() + defaultDuration);
+                    this.editPlanForm.end_date = this.member.end_date && this.member.end_date !== 'N/A' ? this.member.end_date : endD.toISOString().split('T')[0];
+                    
+                    this.editPlanForm.remaining_sessions = this.member.remaining_sessions === 'Unlimited' || this.member.remaining_sessions === 'N/A' ? null : this.member.remaining_sessions;
+                    this.editPlanForm.paid_amount = this.member.paid_amount && this.member.paid_amount !== 'N/A' ? parseFloat(this.member.paid_amount) : 0.0;
+                    this.editPlanForm.balance = this.member.balance && this.member.balance !== 'N/A' ? parseFloat(this.member.balance) : 0.0;
                     this.showPlanModal = true;
+                }
+            },
+
+            onPlanEditChange() {
+                const selected = this.plans.find(x => x.id === this.editPlanForm.plan_id);
+                if (selected) {
+                    this.editPlanForm.paid_amount = parseFloat(selected.price);
+                    this.editPlanForm.balance = 0.0;
+                    this.editPlanForm.remaining_sessions = selected.sessions_limit;
+                    
+                    if (this.editPlanForm.start_date) {
+                        let endD = new Date(this.editPlanForm.start_date);
+                        endD.setDate(endD.getDate() + (selected.duration_days || 30));
+                        this.editPlanForm.end_date = endD.toISOString().split('T')[0];
+                    }
+                }
+            },
+
+            openDemographicsEditModal() {
+                if (this.member) {
+                    this.editDemoForm.full_name = this.member.full_name;
+                    this.editDemoForm.phone = this.member.phone;
+                    this.editDemoForm.gender = this.member.gender;
+                    this.editDemoForm.weight = this.member.weight;
+                    this.editDemoForm.notes = this.member.notes;
+                    this.showDemographicsModal = true;
+                }
+            },
+
+            async submitDemographicsEdit() {
+                try {
+                    const payload = {
+                        full_name: this.editDemoForm.full_name,
+                        phone: this.editDemoForm.phone,
+                        gender: this.editDemoForm.gender,
+                        weight: this.editDemoForm.weight ? parseFloat(this.editDemoForm.weight) : null,
+                        notes: this.editDemoForm.notes || null
+                    };
+                    const res = await ApiAgent.call(`/api/v1/members/${this.memberId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+                    if (res && res.status === 200) {
+                        showToast("Member details updated successfully!", "success");
+                        this.showDemographicsModal = false;
+                        await this.fetchMemberProfile();
+                    } else if (res) {
+                        const err = await res.json();
+                        showToast(err.detail || "Failed to update details.", "error");
+                    }
+                } catch (err) {
+                    console.error("Failed to edit member demographics:", err);
+                    showToast("Network error.", "error");
                 }
             },
 

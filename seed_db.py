@@ -114,18 +114,18 @@ async def initialize_mock_database():
         # 4. GYM MEMBERS
         print(">> Generating 12 Athletes (Members)...")
         members_data = [
-            ("Ahmed Mohamed", "01012345678", "male", datetime(1996, 5, 15), UserStatusEnum.ACTIVE, monthly_plan),
-            ("Sayed Abdelrahman", "01198765432", "male", datetime(1993, 10, 22), UserStatusEnum.ACTIVE, quarterly_plan),
-            ("Mariam Hassan", "01211112222", "female", datetime(1998, 2, 14), UserStatusEnum.ACTIVE, monthly_plan),
-            ("Fatma Ibrahim", "01522223333", "female", datetime(1990, 8, 30), UserStatusEnum.ACTIVE, annual_plan),
-            ("Mostafa Kamel", "01055556666", "male", datetime(1988, 12, 5), UserStatusEnum.FROZEN, quarterly_plan),
-            ("Nour El-Din", "01077778888", "male", datetime(2001, 7, 19), UserStatusEnum.EXPIRED, monthly_plan),
-            ("Yasmine Sabry", "01299990000", "female", datetime(1995, 4, 3), UserStatusEnum.ACTIVE, monthly_plan),
-            ("Hassan El-Shafei", "01133334444", "male", datetime(1985, 9, 12), UserStatusEnum.BLOCKED, monthly_plan),
-            ("Salma Ahmed", "01544445555", "female", datetime(1999, 1, 1), UserStatusEnum.ACTIVE, quarterly_plan),
-            ("Tarek Amin", "01088889999", "male", datetime(1992, 11, 8), UserStatusEnum.ACTIVE, annual_plan),
-            ("Rania Youssef", "01277776666", "female", datetime(1987, 6, 25), UserStatusEnum.ACTIVE, monthly_plan),
-            ("Sherif Nour", "01122221111", "male", datetime(1994, 3, 17), UserStatusEnum.ACTIVE, quarterly_plan)
+            ("Ahmed Mohamed", "01012345678", "male", UserStatusEnum.ACTIVE, monthly_plan),
+            ("Sayed Abdelrahman", "01198765432", "male", UserStatusEnum.ACTIVE, quarterly_plan),
+            ("Mariam Hassan", "01211112222", "female", UserStatusEnum.ACTIVE, monthly_plan),
+            ("Fatma Ibrahim", "01522223333", "female", UserStatusEnum.ACTIVE, annual_plan),
+            ("Mostafa Kamel", "01055556666", "male", UserStatusEnum.FROZEN, quarterly_plan),
+            ("Nour El-Din", "01077778888", "male", UserStatusEnum.EXPIRED, monthly_plan),
+            ("Yasmine Sabry", "01299990000", "female", UserStatusEnum.ACTIVE, monthly_plan),
+            ("Hassan El-Shafei", "01133334444", "male", UserStatusEnum.BLOCKED, monthly_plan),
+            ("Salma Ahmed", "01544445555", "female", UserStatusEnum.ACTIVE, quarterly_plan),
+            ("Tarek Amin", "01088889999", "male", UserStatusEnum.ACTIVE, annual_plan),
+            ("Rania Youssef", "01277776666", "female", UserStatusEnum.ACTIVE, monthly_plan),
+            ("Sherif Nour", "01122221111", "male", UserStatusEnum.ACTIVE, quarterly_plan)
         ]
 
         members_list = []
@@ -134,7 +134,7 @@ async def initialize_mock_database():
         # Hardcode Ahmed Mohamed's QR UUID so scanner works with original test card
         ahmed_qr_uuid = uuid.UUID("a8f92d72-2bc0-4e2b-bb48-18e3ec8b9cd1")
 
-        for idx, (name, phone, gender, dob, status, plan) in enumerate(members_data):
+        for idx, (name, phone, gender, status, plan) in enumerate(members_data):
             qr_val = ahmed_qr_uuid if name == "Ahmed Mohamed" else uuid.uuid4()
             join_offset = random.randint(10, 150) # join date in the last 150 days
             join_date = now - timedelta(days=join_offset)

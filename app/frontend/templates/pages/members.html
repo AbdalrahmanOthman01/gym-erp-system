@@ -18,7 +18,7 @@
                 <span class="absolute inset-y-0 left-0 flex items-center pl-3">
                     <i class="fa-solid fa-magnifying-glass text-gray-500"></i>
                 </span>
-                <input type="text" x-model="searchQuery" @input="fetchMembers()" placeholder="Search ID, Name or Phone..." 
+                <input type="text" x-model="searchQuery" @input="searchMembers()" placeholder="Search ID, Name or Phone..." 
                        class="w-full bg-[#1c1e24] text-white border border-borderMuted rounded-md py-2.5 pl-10 pr-4 text-sm focus:border-brandRed focus:ring-1 focus:ring-brandRed transition outline-none">
             </div>
 
@@ -119,7 +119,19 @@
         
         <!-- Table Pagination Footer -->
         <div class="px-6 py-4 border-t border-borderMuted flex flex-col sm:flex-row items-center justify-between text-xs font-semibold text-gray-500 bg-[#16181E] rounded-b-xl">
-            <span class="mb-3 sm:mb-0" x-text="'Showing ' + members.length + ' registered members'"></span>
+            <span class="mb-3 sm:mb-0" x-text="'Showing page ' + page + ' (' + members.length + ' members on this page)'"></span>
+            
+            <div class="flex items-center space-x-2">
+                <button @click="prevPage()" :disabled="page === 1" 
+                        class="bg-sidebar border border-borderMuted text-gray-400 hover:text-white px-3 py-1.5 rounded text-xs font-medium transition disabled:opacity-30 disabled:cursor-not-allowed">
+                    <i class="fa-solid fa-chevron-left mr-1"></i> Previous
+                </button>
+                <span class="text-gray-400 px-2" x-text="'Page ' + page"></span>
+                <button @click="nextPage()" :disabled="!hasMore" 
+                        class="bg-sidebar border border-borderMuted text-gray-400 hover:text-white px-3 py-1.5 rounded text-xs font-medium transition disabled:opacity-30 disabled:cursor-not-allowed">
+                    Next <i class="fa-solid fa-chevron-right ml-1"></i>
+                </button>
+            </div>
         </div>
 
     </div>
@@ -132,6 +144,9 @@
         return {
             members: [],
             searchQuery: '',
+            page: 1,
+            limit: 20,
+            hasMore: false,
 
             init() {
                 this.fetchMembers();
@@ -139,16 +154,36 @@
 
             async fetchMembers() {
                 try {
-                    let url = '/api/v1/members';
+                    let url = `/api/v1/members?limit=${this.limit}&offset=${(this.page - 1) * this.limit}`;
                     if (this.searchQuery) {
-                        url += `?search=${encodeURIComponent(this.searchQuery)}`;
+                        url += `&search=${encodeURIComponent(this.searchQuery)}`;
                     }
                     const res = await ApiAgent.call(url);
                     if (res) {
                         this.members = await res.json();
+                        this.hasMore = this.members.length === this.limit;
                     }
                 } catch (err) {
                     console.error("Failed to load members:", err);
+                }
+            },
+
+            searchMembers() {
+                this.page = 1;
+                this.fetchMembers();
+            },
+
+            prevPage() {
+                if (this.page > 1) {
+                    this.page--;
+                    this.fetchMembers();
+                }
+            },
+
+            nextPage() {
+                if (this.hasMore) {
+                    this.page++;
+                    this.fetchMembers();
                 }
             },
 

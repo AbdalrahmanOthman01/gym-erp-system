@@ -35,7 +35,7 @@
         </div>
 
         <!-- User Profile Dropdown Component -->
-        <div class="flex items-center pl-6 border-l border-borderMuted cursor-pointer hover:opacity-80 transition" 
+        <div class="flex items-center pl-6 border-l border-borderMuted {% if current_user.role.value == 'superadmin' %}cursor-pointer hover:opacity-80 transition{% endif %}" 
              {% if current_user.role.value == 'superadmin' %}@click="window.location.href='/settings'"{% endif %}>
             <div class="relative">
                 <img src="/static/images/profile-admin.png" 

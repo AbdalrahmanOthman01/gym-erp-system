@@ -158,12 +158,106 @@
         </div>
     </div>
 
-    <!-- Daily Archives Search Panel -->
+    <!-- Custom Date Range Revenue & Profit History -->
     <div class="bg-panel border border-borderMuted rounded-xl shadow-sm mt-8 p-6 space-y-6">
+        <div class="border-b border-borderMuted pb-4 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div>
+                <h3 class="text-base font-bold text-white"><i class="fa-solid fa-chart-line text-brandRed mr-2"></i> Custom Date Range Revenue & Profit History</h3>
+                <p class="text-xs text-gray-400 mt-1">Audit daily totals, total revenue streams, total expenses, and net profit over any custom timeframe.</p>
+            </div>
+            
+            <div class="flex flex-wrap items-center gap-3">
+                <div class="flex items-center space-x-2">
+                    <span class="text-xs text-gray-400">From</span>
+                    <input type="date" x-model="rangeStartDate" class="bg-[#1c1e24] border border-borderMuted text-white text-sm rounded px-3 py-1.5 outline-none focus:border-brandRed">
+                    <span class="text-xs text-gray-400">To</span>
+                    <input type="date" x-model="rangeEndDate" class="bg-[#1c1e24] border border-borderMuted text-white text-sm rounded px-3 py-1.5 outline-none focus:border-brandRed">
+                </div>
+                <button @click="loadRangeHistory()" class="bg-brandRed hover:bg-brandRed-hover text-white text-xs font-semibold px-4 py-2.5 rounded transition flex items-center shadow-lg">
+                    <i class="fa-solid fa-rotate mr-1.5"></i> Update Range
+                </button>
+            </div>
+        </div>
+
+        <!-- Presets Row -->
+        <div class="flex flex-wrap items-center gap-2 pb-2 border-b border-borderMuted/30">
+            <span class="text-xs text-gray-500 font-semibold mr-2">Quick Presets:</span>
+            <button @click="setPresetRange(7)" class="text-xs px-2.5 py-1 rounded bg-[#1c1e24] hover:bg-[#1a1c22]/80 text-gray-300 border border-borderMuted transition">Last 7 Days</button>
+            <button @click="setPresetRange(30)" class="text-xs px-2.5 py-1 rounded bg-[#1c1e24] hover:bg-[#1a1c22]/80 text-gray-300 border border-borderMuted transition">Last 30 Days</button>
+            <button @click="setPresetRange('this_month')" class="text-xs px-2.5 py-1 rounded bg-[#1c1e24] hover:bg-[#1a1c22]/80 text-gray-300 border border-borderMuted transition">This Month</button>
+            <button @click="setPresetRange('last_month')" class="text-xs px-2.5 py-1 rounded bg-[#1c1e24] hover:bg-[#1a1c22]/80 text-gray-300 border border-borderMuted transition">Last Month</button>
+        </div>
+
+        <!-- Aggregate Range Stats -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4" x-show="rangeHistoryList.length > 0">
+            <div class="bg-[#1c1e24] border border-borderMuted/60 p-4 rounded-lg">
+                <p class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Range Subscriptions</p>
+                <p class="text-base font-extrabold text-white mt-1" x-text="rangeAggregates.membership.toFixed(2) + ' EGP'"></p>
+            </div>
+            <div class="bg-[#1c1e24] border border-borderMuted/60 p-4 rounded-lg">
+                <p class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Range POS Sales</p>
+                <p class="text-base font-extrabold text-white mt-1" x-text="rangeAggregates.sales.toFixed(2) + ' EGP'"></p>
+            </div>
+            <div class="bg-[#1c1e24] border border-borderMuted/60 p-4 rounded-lg">
+                <p class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Range Total Revenue</p>
+                <p class="text-lg font-extrabold text-green-400 mt-1" x-text="rangeAggregates.revenue.toFixed(2) + ' EGP'"></p>
+            </div>
+            <div class="bg-[#1c1e24] border border-borderMuted/60 p-4 rounded-lg">
+                <p class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Range Total Expenses</p>
+                <p class="text-base font-extrabold text-red-400 mt-1" x-text="rangeAggregates.expenses.toFixed(2) + ' EGP'"></p>
+            </div>
+            <div class="bg-[#1c1e24] border border-borderMuted/60 p-4 rounded-lg">
+                <p class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Range Net Profit</p>
+                <p class="text-lg font-extrabold mt-1" :class="rangeAggregates.profit >= 0 ? 'text-green-400' : 'text-red-400'"
+                   x-text="(rangeAggregates.profit >= 0 ? '+' : '') + rangeAggregates.profit.toFixed(2) + ' EGP'"></p>
+            </div>
+        </div>
+
+        <!-- Range History Table -->
+        <div class="overflow-x-auto border border-borderMuted rounded-lg" x-show="rangeHistoryList.length > 0">
+            <table class="w-full text-left text-sm whitespace-nowrap">
+                <thead class="bg-[#1c1e24] border-b border-borderMuted text-gray-400 font-semibold text-[11px] uppercase tracking-wider">
+                    <tr>
+                        <th class="px-5 py-3">Date</th>
+                        <th class="px-5 py-3 text-right">Subscriptions (A)</th>
+                        <th class="px-5 py-3 text-right">POS Sales (B)</th>
+                        <th class="px-5 py-3 text-right text-white">Total Income (A + B)</th>
+                        <th class="px-5 py-3 text-right text-red-400 font-semibold">Expenses (C)</th>
+                        <th class="px-5 py-3 text-right">Net Profit (A+B-C)</th>
+                        <th class="px-5 py-3 text-center">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-borderMuted text-gray-300 bg-[#16181e]/40">
+                    <template x-for="day in rangeHistoryList" :key="day.date">
+                        <tr class="hover:bg-[#1f232d]/50 transition">
+                            <td class="px-5 py-3 font-semibold text-white" x-text="day.date"></td>
+                            <td class="px-5 py-3 text-right font-mono text-xs text-gray-400" x-text="day.membership_income.toFixed(2) + ' EGP'"></td>
+                            <td class="px-5 py-3 text-right font-mono text-xs text-gray-400" x-text="day.sales_income.toFixed(2) + ' EGP'"></td>
+                            <td class="px-5 py-3 text-right font-mono text-xs text-green-400 font-semibold" x-text="day.total_income.toFixed(2) + ' EGP'"></td>
+                            <td class="px-5 py-3 text-right font-mono text-xs text-red-400" x-text="day.expenses.toFixed(2) + ' EGP'"></td>
+                            <td class="px-5 py-3 text-right font-mono text-xs font-bold" :class="day.net_profit >= 0 ? 'text-green-400' : 'text-red-400'"
+                                x-text="(day.net_profit >= 0 ? '+' : '') + day.net_profit.toFixed(2) + ' EGP'"></td>
+                            <td class="px-5 py-3 text-center">
+                                <button @click="inspectDay(day.date)" class="text-xs bg-sidebar hover:bg-[#1f232d] text-white border border-borderMuted hover:border-brandRed px-2.5 py-1.5 rounded transition">
+                                    <i class="fa-solid fa-eye mr-1"></i> Inspect Details
+                                </button>
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+        </div>
+        <div x-show="rangeHistoryList.length === 0" class="text-center py-8 text-gray-500 text-xs bg-[#16181e]/20 border border-borderMuted/50 rounded-lg">
+            No history loaded. Choose a date range or select a preset range to query revenue history.
+        </div>
+    </div>
+
+    <!-- Daily Archives Search Panel -->
+    <div id="daily-archives-panel" class="bg-panel border border-borderMuted rounded-xl shadow-sm mt-8 p-6 space-y-6">
         <div class="border-b border-borderMuted pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div>
                 <h3 class="text-base font-bold text-white"><i class="fa-solid fa-clock-rotate-left text-brandRed mr-2"></i> Daily Archives History Search</h3>
-                <p class="text-xs text-gray-400 mt-1">Audit daily financials and list registered members for any previous date.</p>
+                <p class="text-xs text-gray-400 mt-1">Audit daily financials and list registered members/expenses for any previous date.</p>
             </div>
             
             <div class="flex items-center space-x-3">
@@ -191,50 +285,79 @@
                     <p class="text-base font-semibold text-white mt-1" x-text="historyResult ? historyResult.sales_income.toFixed(2) + ' EGP' : '0.00 EGP'"></p>
                 </div>
                 <div class="bg-[#1c1e24] border border-borderMuted/60 p-4 rounded-lg">
-                    <p class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Net Balance</p>
+                    <p class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Net Balance (Profit)</p>
                     <p class="text-lg font-bold mt-1" :class="historyResult && historyResult.net_balance >= 0 ? 'text-green-400' : 'text-red-400'" 
                        x-text="historyResult ? (historyResult.net_balance >= 0 ? '+' : '') + historyResult.net_balance.toFixed(2) + ' EGP' : '0.00 EGP'"></p>
                 </div>
             </div>
             
-            <!-- Subscribed Members List -->
-            <div>
-                <h4 class="text-xs font-bold text-white mb-3 uppercase tracking-wider"><i class="fa-solid fa-user-check mr-1 text-green-400"></i> Members Subscribed on <span x-text="historyResult ? historyResult.date : ''"></span></h4>
-                <div class="overflow-x-auto border border-borderMuted rounded-lg">
-                    <table class="w-full text-left text-sm whitespace-nowrap">
-                        <thead class="bg-[#1c1e24] border-b border-borderMuted text-gray-400 font-semibold text-[11px] uppercase tracking-wider">
-                            <tr>
-                                <th class="px-5 py-3">Member Name</th>
-                                <th class="px-5 py-3">Contact</th>
-                                <th class="px-5 py-3">Gender</th>
-                                <th class="px-5 py-3">Membership Plan</th>
-                                <th class="px-5 py-3 font-mono text-right">Amount Paid</th>
-                                <th class="px-5 py-3 font-mono text-right">Balance</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-borderMuted text-gray-300 bg-[#16181e]/40">
-                            <template x-for="member in (historyResult ? historyResult.subscribed_members : [])" :key="member.id">
-                                <tr class="hover:bg-[#1f232d]/50 transition">
-                                    <td class="px-5 py-3 font-semibold text-white" x-text="member.full_name"></td>
-                                    <td class="px-5 py-3 font-mono text-xs text-gray-400" x-text="member.phone"></td>
-                                    <td class="px-5 py-3 capitalize text-xs text-gray-400" x-text="member.gender"></td>
-                                    <td class="px-5 py-3 text-xs text-white" x-text="member.plan_name"></td>
-                                    <td class="px-5 py-3 font-mono text-right text-xs text-green-400" x-text="member.paid_amount.toFixed(2) + ' EGP'"></td>
-                                    <td class="px-5 py-3 font-mono text-right text-xs" :class="member.balance > 0 ? 'text-red-400 font-bold' : 'text-gray-500'" x-text="member.balance.toFixed(2) + ' EGP'"></td>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <!-- Subscribed Members List -->
+                <div>
+                    <h4 class="text-xs font-bold text-white mb-3 uppercase tracking-wider"><i class="fa-solid fa-user-check mr-1 text-green-400"></i> Members Subscribed on <span x-text="historyResult ? historyResult.date : ''"></span></h4>
+                    <div class="overflow-x-auto border border-borderMuted rounded-lg">
+                        <table class="w-full text-left text-sm whitespace-nowrap">
+                            <thead class="bg-[#1c1e24] border-b border-borderMuted text-gray-400 font-semibold text-[11px] uppercase tracking-wider">
+                                <tr>
+                                    <th class="px-4 py-3">Member Name</th>
+                                    <th class="px-4 py-3">Contact</th>
+                                    <th class="px-4 py-3">Plan</th>
+                                    <th class="px-4 py-3 font-mono text-right">Paid</th>
+                                    <th class="px-4 py-3 font-mono text-right">Balance</th>
                                 </tr>
-                            </template>
-                            <tr x-show="historyResult && historyResult.subscribed_members.length === 0">
-                                <td colspan="6" class="px-5 py-8 text-center text-gray-500 text-xs">
-                                    No members registered or renewed on this date.
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
+                            </thead>
+                            <tbody class="divide-y divide-borderMuted text-gray-300 bg-[#16181e]/40">
+                                <template x-for="member in (historyResult ? historyResult.subscribed_members : [])" :key="member.id">
+                                    <tr class="hover:bg-[#1f232d]/50 transition animate-fadeIn">
+                                        <td class="px-4 py-3 font-semibold text-white" x-text="member.full_name"></td>
+                                        <td class="px-4 py-3 font-mono text-xs text-gray-400" x-text="member.phone"></td>
+                                        <td class="px-4 py-3 text-xs text-white" x-text="member.plan_name"></td>
+                                        <td class="px-4 py-3 font-mono text-right text-xs text-green-400" x-text="member.paid_amount.toFixed(2) + ' EGP'"></td>
+                                        <td class="px-4 py-3 font-mono text-right text-xs" :class="member.balance > 0 ? 'text-red-400 font-bold' : 'text-gray-500'" x-text="member.balance.toFixed(2) + ' EGP'"></td>
+                                    </tr>
+                                </template>
+                                <tr x-show="historyResult && historyResult.subscribed_members.length === 0">
+                                    <td colspan="5" class="px-4 py-8 text-center text-gray-500 text-xs">
+                                        No members registered or renewed on this date.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Logged Expenses List -->
+                <div>
+                    <h4 class="text-xs font-bold text-white mb-3 uppercase tracking-wider"><i class="fa-solid fa-receipt mr-1 text-red-400"></i> Expenses Logged on <span x-text="historyResult ? historyResult.date : ''"></span></h4>
+                    <div class="overflow-x-auto border border-borderMuted rounded-lg">
+                        <table class="w-full text-left text-sm whitespace-nowrap">
+                            <thead class="bg-[#1c1e24] border-b border-borderMuted text-gray-400 font-semibold text-[11px] uppercase tracking-wider">
+                                <tr>
+                                    <th class="px-4 py-3">Category</th>
+                                    <th class="px-4 py-3">Notes</th>
+                                    <th class="px-4 py-3 font-mono text-right">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-borderMuted text-gray-300 bg-[#16181e]/40">
+                                <template x-for="exp in (historyResult ? historyResult.expenses : [])" :key="exp.id">
+                                    <tr class="hover:bg-[#1f232d]/50 transition animate-fadeIn">
+                                        <td class="px-4 py-3 font-semibold text-white capitalize" x-text="exp.category"></td>
+                                        <td class="px-4 py-3 text-xs text-gray-400 max-w-[200px] truncate" :title="exp.notes" x-text="exp.notes || 'N/A'"></td>
+                                        <td class="px-4 py-3 font-mono text-right text-xs text-red-400" x-text="exp.amount.toFixed(2) + ' EGP'"></td>
+                                    </tr>
+                                </template>
+                                <tr x-show="historyResult && (!historyResult.expenses || historyResult.expenses.length === 0)">
+                                    <td colspan="3" class="px-4 py-8 text-center text-gray-500 text-xs">
+                                        No expenses logged on this date.
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
     </div>
-
 </div>
 {% endblock %}
 
@@ -257,8 +380,15 @@
             historyResult: null,
             summary: null,
 
+            // New range search variables
+            rangeStartDate: '',
+            rangeEndDate: '',
+            rangeHistoryList: [],
+            rangeAggregates: { membership: 0, sales: 0, revenue: 0, expenses: 0, profit: 0 },
+
             init() {
                 this.loadReports();
+                this.setPresetRange(30); // Default to last 30 days
             },
 
             async loadReports() {
@@ -288,6 +418,66 @@
                 } catch (err) {
                     console.error("Failed to load reports summary:", err);
                     showToast('Failed to compile reports data.', 'error');
+                }
+            },
+
+            async loadRangeHistory() {
+                if (!this.rangeStartDate || !this.rangeEndDate) return;
+                try {
+                    const res = await ApiAgent.call(`/api/v1/reports/revenue-history?start_date=${this.rangeStartDate}&end_date=${this.rangeEndDate}`);
+                    if (res) {
+                        const data = await res.json();
+                        this.rangeHistoryList = data;
+                        
+                        // Calculate aggregates
+                        let membership = 0;
+                        let sales = 0;
+                        let revenue = 0;
+                        let expenses = 0;
+                        let profit = 0;
+                        
+                        data.forEach(day => {
+                            membership += day.membership_income;
+                            sales += day.sales_income;
+                            revenue += day.total_income;
+                            expenses += day.expenses;
+                            profit += day.net_profit;
+                        });
+                        
+                        this.rangeAggregates = { membership, sales, revenue, expenses, profit };
+                    }
+                } catch (err) {
+                    console.error("Failed to load range revenue history:", err);
+                    showToast('Failed to compile range history reports.', 'error');
+                }
+            },
+
+            setPresetRange(preset) {
+                const today = new Date();
+                let start = new Date();
+                let end = new Date();
+                
+                if (typeof preset === 'number') {
+                    start.setDate(today.getDate() - preset + 1);
+                } else if (preset === 'this_month') {
+                    start = new Date(today.getFullYear(), today.getMonth(), 1);
+                } else if (preset === 'last_month') {
+                    start = new Date(today.getFullYear(), today.getMonth() - 1, 1);
+                    end = new Date(today.getFullYear(), today.getMonth(), 0);
+                }
+                
+                this.rangeStartDate = start.toISOString().split('T')[0];
+                this.rangeEndDate = end.toISOString().split('T')[0];
+                this.loadRangeHistory();
+            },
+
+            inspectDay(date) {
+                this.historySearchDate = date;
+                this.searchDailyHistory();
+                
+                const target = document.getElementById('daily-archives-panel');
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth' });
                 }
             },
 

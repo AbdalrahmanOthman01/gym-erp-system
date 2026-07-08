@@ -47,6 +47,7 @@ class User(Base):
     gender: Mapped[str] = mapped_column(String(10))  # 'male' or 'female'
     weight: Mapped[float | None] = mapped_column(Float, nullable=True)
     notes: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    address: Mapped[str | None] = mapped_column(String(255), nullable=True)
     profile_image: Mapped[str | None] = mapped_column(String(255), nullable=True)
     
     # Branching for multi-gym scalability later (default defaults to generic 1 via backend logic)
@@ -162,6 +163,8 @@ class BodyMeasurement(Base):
     body_fat_percentage: Mapped[float | None] = mapped_column(Float, nullable=True)
     muscle_mass: Mapped[float | None] = mapped_column(Float, nullable=True)
     bmi: Mapped[float | None] = mapped_column(Float, nullable=True)
+    water_percentage: Mapped[float | None] = mapped_column(Float, nullable=True)
+    inbody_score: Mapped[float | None] = mapped_column(Float, nullable=True)
     
     user = relationship("User", back_populates="measurements")
 

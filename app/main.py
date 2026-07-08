@@ -129,6 +129,20 @@ async def on_startup():
                 await conn.execute(text("ALTER TABLE users ADD COLUMN notes VARCHAR(255)"))
             except Exception:
                 pass
+            try:
+                await conn.execute(text("ALTER TABLE users ADD COLUMN address VARCHAR(255)"))
+            except Exception:
+                pass
+            
+            # Add columns to body_measurements
+            try:
+                await conn.execute(text("ALTER TABLE body_measurements ADD COLUMN water_percentage FLOAT"))
+            except Exception:
+                pass
+            try:
+                await conn.execute(text("ALTER TABLE body_measurements ADD COLUMN inbody_score FLOAT"))
+            except Exception:
+                pass
             
             # Add columns to user_memberships
             try:

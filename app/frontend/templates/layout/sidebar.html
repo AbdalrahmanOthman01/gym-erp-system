@@ -47,12 +47,14 @@
                 <span class="ml-3 font-medium text-sm">Attendance</span>
             </a>
             
+            {% if current_user.role.value == 'superadmin' %}
             <a href="/plans" 
                :class="(currentPath === '/plans') ? 'bg-brandRed text-white shadow-lg shadow-brandRed/20' : 'text-gray-400 hover:text-white hover:bg-[#1c1e24]'"
                class="flex items-center px-4 py-3 rounded-md transition-colors">
                 <i class="fa-solid fa-lock w-6 text-center text-lg"></i>
                 <span class="ml-3 font-medium text-sm">Membership Plans</span>
             </a>
+            {% endif %}
 
             <a href="/pos" 
                :class="(currentPath === '/pos') ? 'bg-brandRed text-white shadow-lg shadow-brandRed/20' : 'text-gray-400 hover:text-white hover:bg-[#1c1e24]'"
@@ -77,12 +79,14 @@
             </a>
             {% endif %}
 
+            {% if current_user.role.value == 'superadmin' %}
             <a href="/reports" 
                :class="(currentPath === '/reports') ? 'bg-brandRed text-white shadow-lg shadow-brandRed/20' : 'text-gray-400 hover:text-white hover:bg-[#1c1e24]'"
                class="flex items-center px-4 py-3 rounded-md transition-colors">
                 <i class="fa-solid fa-chart-simple w-6 text-center text-lg"></i>
                 <span class="ml-3 font-medium text-sm">Reports & Analytics</span>
             </a>
+            {% endif %}
 
             {% if current_user.role.value == 'superadmin' %}
             <a href="/staff" 

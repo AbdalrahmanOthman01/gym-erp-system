@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import func, desc
+from sqlalchemy.orm import selectinload
 
 from app.db.database import get_db
 from app.core.dependencies import get_current_user
@@ -41,16 +42,24 @@ async def get_reports_summary(
     revenue_membership_data = []
     revenue_sales_data = []
     
+    current_year = now.year
+    current_month = now.month
+    
     for i in range(5, -1, -1):
-        target_month_date = now - timedelta(days=i * 30)
-        month_label = target_month_date.strftime("%b %Y")
-        months.append(month_label)
-        
-        start_date = target_month_date.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        if target_month_date.month == 12:
-            end_date = target_month_date.replace(year=target_month_date.year + 1, month=1, day=1)
+        m = current_month - i
+        y = current_year
+        while m <= 0:
+            m += 12
+            y -= 1
+            
+        start_date = datetime(y, m, 1, 0, 0, 0)
+        if m == 12:
+            end_date = datetime(y + 1, 1, 1, 0, 0, 0)
         else:
-            end_date = target_month_date.replace(month=target_month_date.month + 1, day=1)
+            end_date = datetime(y, m + 1, 1, 0, 0, 0)
+            
+        month_label = start_date.strftime("%b %Y")
+        months.append(month_label)
             
         # Payments in month
         p_stmt = select(func.sum(PaymentLog.amount)).where(
@@ -238,8 +247,8 @@ async def get_daily_history(
     db: AsyncSession = Depends(get_db)
 ):
     """
-    Returns that day's financial summaries and the list of members
-    whose membership subscriptions started on that day.
+    Returns that day's financial summaries, the list of members
+    whose membership subscriptions started on that day, and detailed expenses.
     """
     try:
         query_date = datetime.strptime(date, "%Y-%m-%d")
@@ -320,6 +329,23 @@ async def get_daily_history(
             "balance": float(m.balance)
         })
 
+    # Fetch expenses logged on that day
+    expenses_list_stmt = select(Expense).where(
+        Expense.created_at >= start_time,
+        Expense.created_at < end_time
+    ).order_by(Expense.created_at.desc())
+    expenses_list_res = await db.execute(expenses_list_stmt)
+    expenses_list = expenses_list_res.scalars().all()
+
+    logged_expenses = []
+    for exp in expenses_list:
+        logged_expenses.append({
+            "id": str(exp.id),
+            "amount": float(exp.amount),
+            "category": exp.category,
+            "notes": exp.notes or ""
+        })
+
     return {
         "date": date,
         "total_income": total_income,
@@ -327,5 +353,127 @@ async def get_daily_history(
         "sales_income": sales_income,
         "total_expenses": total_expenses,
         "net_balance": net_balance,
-        "subscribed_members": subscribed_members
+        "subscribed_members": subscribed_members,
+        "expenses": logged_expenses
     }
+
+@reports_router.get("/revenue-history", response_model=None)
+async def get_revenue_history_range(
+    start_date: str,
+    end_date: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Returns daily financial reports (subscriptions, POS sales, expenses, profits)
+    over a custom date range YYYY-MM-DD.
+    Enforces gender boundaries:
+    - Male accountants see payments & sales filtered by male members.
+    - Female accountants see payments & sales filtered by female members.
+    - SuperAdmins see global reports.
+    """
+    try:
+        start_dt = datetime.strptime(start_date, "%Y-%m-%d")
+        end_dt = datetime.strptime(end_date, "%Y-%m-%d")
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
+
+    if start_dt > end_dt:
+        raise HTTPException(status_code=400, detail="Start date must be before or equal to end date")
+
+    if (end_dt - start_dt).days > 366:
+        raise HTTPException(status_code=400, detail="Date range cannot exceed 1 year")
+
+    role = current_user.role
+    gender_filter = None
+    if role == RoleEnum.ACCOUNTANT_M:
+        gender_filter = "male"
+    elif role == RoleEnum.ACCOUNTANT_F:
+        gender_filter = "female"
+
+    # Grouped Payments
+    p_stmt = select(
+        func.date(PaymentLog.payment_date).label("date"),
+        func.sum(PaymentLog.amount).label("amount")
+    ).where(
+        PaymentLog.payment_date >= start_dt,
+        PaymentLog.payment_date < end_dt + timedelta(days=1)
+    )
+    if gender_filter:
+        p_stmt = p_stmt.join(User, PaymentLog.user_id == User.id).where(User.gender == gender_filter)
+    p_stmt = p_stmt.group_by(func.date(PaymentLog.payment_date))
+    p_res = await db.execute(p_stmt)
+    payments_by_day = {}
+    for row in p_res.all():
+        d = row[0]
+        if hasattr(d, "strftime"):
+            d = d.strftime("%Y-%m-%d")
+        else:
+            d = str(d)
+        payments_by_day[d] = float(row[1] or 0.0)
+
+    # Grouped POS Sales
+    s_stmt = select(
+        func.date(Sale.created_at).label("date"),
+        func.sum(Sale.total_amount).label("amount")
+    ).where(
+        Sale.created_at >= start_dt,
+        Sale.created_at < end_dt + timedelta(days=1)
+    )
+    if gender_filter:
+        s_stmt = s_stmt.join(User, Sale.buyer_id == User.id).where(User.gender == gender_filter)
+    s_stmt = s_stmt.group_by(func.date(Sale.created_at))
+    s_res = await db.execute(s_stmt)
+    sales_by_day = {}
+    for row in s_res.all():
+        d = row[0]
+        if hasattr(d, "strftime"):
+            d = d.strftime("%Y-%m-%d")
+        else:
+            d = str(d)
+        sales_by_day[d] = float(row[1] or 0.0)
+
+    # Grouped Expenses
+    e_stmt = select(
+        func.date(Expense.created_at).label("date"),
+        func.sum(Expense.amount).label("amount")
+    ).where(
+        Expense.created_at >= start_dt,
+        Expense.created_at < end_dt + timedelta(days=1)
+    ).group_by(func.date(Expense.created_at))
+    e_res = await db.execute(e_stmt)
+    expenses_by_day = {}
+    for row in e_res.all():
+        d = row[0]
+        if hasattr(d, "strftime"):
+            d = d.strftime("%Y-%m-%d")
+        else:
+            d = str(d)
+        expenses_by_day[d] = float(row[1] or 0.0)
+
+    # Generate complete list of days in the range
+    history = []
+    curr = start_dt
+    while curr <= end_dt:
+        date_str = curr.strftime("%Y-%m-%d")
+        
+        sub_inc = payments_by_day.get(date_str, 0.0)
+        pos_inc = sales_by_day.get(date_str, 0.0)
+        exp_out = expenses_by_day.get(date_str, 0.0)
+        
+        total_inc = sub_inc + pos_inc
+        net_profit = total_inc - exp_out
+        
+        history.append({
+            "date": date_str,
+            "membership_income": sub_inc,
+            "sales_income": pos_inc,
+            "total_income": total_inc,
+            "expenses": exp_out,
+            "net_profit": net_profit
+        })
+        curr += timedelta(days=1)
+
+    # Sort history descending (newest first)
+    history.reverse()
+    return history

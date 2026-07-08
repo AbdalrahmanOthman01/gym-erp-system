@@ -21,7 +21,9 @@ class MemberCreate(BaseModel):
     gender: str # 'male' or 'female'
     weight: Optional[float] = None
     notes: Optional[str] = None
+    address: Optional[str] = None # Optional address demographics
     plan_id: Optional[str] = None # Optional initial plan
+    paid_amount: Optional[float] = None # Optional initial paid amount for installments
 
 class MemberUpdate(BaseModel):
     full_name: str
@@ -29,6 +31,15 @@ class MemberUpdate(BaseModel):
     gender: str
     weight: Optional[float] = None
     notes: Optional[str] = None
+    address: Optional[str] = None # Optional address demographics
+
+class MeasurementCreate(BaseModel):
+    weight: float
+    height: Optional[float] = None
+    body_fat_percentage: Optional[float] = None
+    muscle_mass: Optional[float] = None
+    water_percentage: Optional[float] = None
+    inbody_score: Optional[float] = None
 
 class MembershipEditPayload(BaseModel):
     plan_id: str
@@ -44,7 +55,7 @@ class ActionNotes(BaseModel):
 @member_router.get("", response_model=None)
 async def list_members(
     search: Optional[str] = None,
-    limit: int = 50,
+    limit: int = 10000,
     offset: int = 0,
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
@@ -120,6 +131,7 @@ async def create_member(
         gender=payload.gender,
         weight=payload.weight,
         notes=payload.notes,
+        address=payload.address, # Save address demographics
         role=RoleEnum.MEMBER,
         status=UserStatusEnum.ACTIVE
     )
@@ -136,6 +148,9 @@ async def create_member(
         start_date = datetime.now()
         end_date = start_date + timedelta(days=plan.duration_days) if plan.duration_days else None
 
+        paid_val = payload.paid_amount if payload.paid_amount is not None else float(plan.price)
+        membership_balance = max(0.0, float(plan.price) - paid_val)
+
         new_membership = UserMembership(
             id=uuid.uuid4(),
             user_id=new_member.id,
@@ -143,8 +158,8 @@ async def create_member(
             start_date=start_date,
             end_date=end_date,
             remaining_sessions=plan.sessions_limit,
-            paid_amount=plan.price,
-            balance=0.0,
+            paid_amount=paid_val,
+            balance=membership_balance,
             is_active=True
         )
         db.add(new_membership)
@@ -155,9 +170,9 @@ async def create_member(
             user_id=new_member.id,
             received_by=current_user.id,
             membership_id=new_membership.id,
-            amount=plan.price,
+            amount=paid_val,
             payment_method="Cash", # default cash register intake
-            notes=f"Initial subscription registration: {plan.name}"
+            notes=f"Initial subscription registration: {plan.name} (Paid: {paid_val} EGP, Balance: {membership_balance} EGP)"
         )
         db.add(payment)
         await db.commit()
@@ -234,6 +249,7 @@ async def get_member_detail(
         "gender": member.gender,
         "weight": member.weight,
         "notes": member.notes,
+        "address": member.address or "", # Return address demographics
         "status": member.status.value,
         "qr_uuid": str(member.qr_uuid),
         "join_date": member.join_date.strftime("%d %b %Y"),
@@ -272,6 +288,7 @@ async def update_member(
     member.gender = payload.gender
     member.weight = payload.weight
     member.notes = payload.notes
+    member.address = payload.address # Update address demographics
 
     await db.commit()
     return {"message": "Member details updated successfully."}
@@ -328,12 +345,16 @@ async def edit_member_membership(
         raise HTTPException(status_code=403, detail="Only Super Administrators can edit active membership packages.")
     
     member_uuid = uuid.UUID(member_id)
+    
+    # Fetch the member first to verify existence and check details
+    member_res = await db.execute(select(User).where(User.id == member_uuid, User.is_deleted == False))
+    member = member_res.scalar_one_or_none()
+    if not member:
+        raise HTTPException(status_code=404, detail="Member not found.")
+
     stmt = select(UserMembership).where(UserMembership.user_id == member_uuid, UserMembership.is_active == True)
     res = await db.execute(stmt)
     active_membership = res.scalar_one_or_none()
-
-    if not active_membership:
-        raise HTTPException(status_code=404, detail="No active membership found to edit.")
 
     try:
         start_dt = datetime.strptime(payload.start_date, "%Y-%m-%d")
@@ -341,15 +362,173 @@ async def edit_member_membership(
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
 
-    active_membership.plan_id = uuid.UUID(payload.plan_id)
-    active_membership.start_date = start_dt
-    active_membership.end_date = end_dt
-    active_membership.remaining_sessions = payload.remaining_sessions
-    active_membership.paid_amount = payload.paid_amount
-    active_membership.balance = payload.balance
+    if not active_membership:
+        from sqlalchemy import update
+        # Deactivate any historical inactive memberships to maintain clean state
+        await db.execute(
+            update(UserMembership).where(UserMembership.user_id == member_uuid).values(is_active=False)
+        )
+        # Create a new active membership if none existed
+        active_membership = UserMembership(
+            id=uuid.uuid4(),
+            user_id=member_uuid,
+            plan_id=uuid.UUID(payload.plan_id),
+            start_date=start_dt,
+            end_date=end_dt,
+            remaining_sessions=payload.remaining_sessions,
+            paid_amount=payload.paid_amount,
+            balance=payload.balance,
+            is_active=True
+        )
+        db.add(active_membership)
+        
+        # Automatically set user's status to active
+        member.status = UserStatusEnum.ACTIVE
+        member.frozen_at = None
+
+        # Create a payment log entry for assigning the new plan
+        plan_res = await db.execute(select(MembershipPlan).where(MembershipPlan.id == active_membership.plan_id))
+        plan = plan_res.scalar_one_or_none()
+        plan_name = plan.name if plan else "Assigned Plan"
+        
+        payment = PaymentLog(
+            id=uuid.uuid4(),
+            user_id=member_uuid,
+            received_by=current_user.id,
+            membership_id=active_membership.id,
+            amount=payload.paid_amount,
+            payment_method="Cash", # default cash intake for plan assignment
+            notes=f"Active plan assignment via admin portal: {plan_name}"
+        )
+        db.add(payment)
+    else:
+        active_membership.plan_id = uuid.UUID(payload.plan_id)
+        active_membership.start_date = start_dt
+        active_membership.end_date = end_dt
+        active_membership.remaining_sessions = payload.remaining_sessions
+        active_membership.paid_amount = payload.paid_amount
+        active_membership.balance = payload.balance
 
     await db.commit()
     return {"message": "Membership plan edited successfully."}
+
+# ===============================================
+# Biometric / InBody Tracking Endpoints
+# ===============================================
+
+@member_router.get("/{member_id}/measurements", response_model=None)
+async def list_member_measurements(
+    member_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """ Retrieves chronological body checkup checkin metrics. """
+    member_uuid = uuid.UUID(member_id)
+    member_res = await db.execute(select(User).where(User.id == member_uuid, User.is_deleted == False))
+    member = member_res.scalar_one_or_none()
+    
+    if not member:
+        raise HTTPException(status_code=404, detail="Member not found.")
+        
+    # Enforce Accountant privacy boundaries
+    validator = StrictGenderScopeValidator()
+    validator(member.gender, current_user)
+    
+    from app.models.models_db import BodyMeasurement
+    stmt = select(BodyMeasurement).where(BodyMeasurement.user_id == member_uuid).order_by(BodyMeasurement.date_recorded.desc())
+    res = await db.execute(stmt)
+    records = res.scalars().all()
+    
+    return [
+        {
+            "id": str(r.id),
+            "date_recorded": r.date_recorded.strftime("%Y-%m-%d %H:%M"),
+            "date_label": r.date_recorded.strftime("%d %b %Y"),
+            "weight": r.weight,
+            "height": r.height,
+            "body_fat_percentage": r.body_fat_percentage,
+            "muscle_mass": r.muscle_mass,
+            "water_percentage": r.water_percentage,
+            "bmi": round(r.bmi, 2) if r.bmi else None,
+            "inbody_score": r.inbody_score
+        }
+        for r in records
+    ]
+
+@member_router.post("/{member_id}/measurements", response_model=None)
+async def add_member_measurement(
+    member_id: str,
+    payload: MeasurementCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """ Appends a new InBody checkup record for a member. """
+    member_uuid = uuid.UUID(member_id)
+    member_res = await db.execute(select(User).where(User.id == member_uuid, User.is_deleted == False))
+    member = member_res.scalar_one_or_none()
+    
+    if not member:
+        raise HTTPException(status_code=404, detail="Member not found.")
+        
+    # Enforce gender scope and roles (only accountants/admins can log)
+    if current_user.role == RoleEnum.MEMBER:
+        raise HTTPException(status_code=403, detail="Standard members cannot record biometric data.")
+        
+    validator = StrictGenderScopeValidator()
+    validator(member.gender, current_user)
+    
+    # Calculate BMI automatically: bmi = weight (kg) / height^2 (meters)
+    calculated_bmi = None
+    if payload.height and payload.height > 0:
+        height_m = payload.height / 100.0
+        calculated_bmi = payload.weight / (height_m ** 2)
+        
+    from app.models.models_db import BodyMeasurement
+    new_record = BodyMeasurement(
+        id=uuid.uuid4(),
+        user_id=member_uuid,
+        weight=payload.weight,
+        height=payload.height,
+        body_fat_percentage=payload.body_fat_percentage,
+        muscle_mass=payload.muscle_mass,
+        water_percentage=payload.water_percentage,
+        inbody_score=payload.inbody_score,
+        bmi=calculated_bmi
+    )
+    db.add(new_record)
+    
+    # Proactively update the user's latest weight column
+    member.weight = payload.weight
+    
+    await db.commit()
+    return {"message": "InBody checkup record logged successfully.", "measurement_id": str(new_record.id)}
+
+@member_router.delete("/{member_id}/measurements/{measurement_id}", response_model=None)
+async def delete_member_measurement(
+    member_id: str,
+    measurement_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """ Deletes an historical InBody record. Super Admin only. """
+    if current_user.role != RoleEnum.SUPERADMIN:
+        raise HTTPException(status_code=403, detail="Only Super Administrators can delete historical records.")
+        
+    member_uuid = uuid.UUID(member_id)
+    meas_uuid = uuid.UUID(measurement_id)
+    
+    from app.models.models_db import BodyMeasurement
+    stmt = select(BodyMeasurement).where(BodyMeasurement.id == meas_uuid, BodyMeasurement.user_id == member_uuid)
+    res = await db.execute(stmt)
+    record = res.scalar_one_or_none()
+    
+     if not record:
+        raise HTTPException(status_code=404, detail="Measurement record not found.")
+        
+    from sqlalchemy import delete
+    await db.execute(delete(BodyMeasurement).where(BodyMeasurement.id == meas_uuid))
+    await db.commit()
+    return {"message": "InBody checkup record deleted."}
 
 # ===============================================
 # Admin Controls: Freeze, Block, Unfreeze, Unblock

@@ -145,6 +145,8 @@ async def render_attendance_view(request: Request, current_user: User = Depends(
 @ui_router.get("/plans", response_class=HTMLResponse)
 async def render_plans_view(request: Request, current_user: User = Depends(get_current_user_ui)):
     """ UI view to configure plans. """
+    if current_user.role != RoleEnum.SUPERADMIN:
+        return RedirectResponse(url="/dashboard", status_code=303)
     return templates.TemplateResponse(
         request, "pages/membership.html",
         {"page_title": "Configure Plans", "current_user": current_user}
@@ -199,6 +201,8 @@ async def render_staff_view(request: Request, current_user: User = Depends(get_c
 @ui_router.get("/reports", response_class=HTMLResponse)
 async def render_reports_view(request: Request, current_user: User = Depends(get_current_user_ui)):
     """ UI view for viewing revenue, product sales, and check-in reports. """
+    if current_user.role != RoleEnum.SUPERADMIN:
+        return RedirectResponse(url="/dashboard", status_code=303)
     return templates.TemplateResponse(
         request, "pages/reports.html",
         {"page_title": "Reports & Analytics", "current_user": current_user}

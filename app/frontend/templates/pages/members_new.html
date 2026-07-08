@@ -52,14 +52,20 @@
 
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <!-- Initial Plan -->
-                <div class="sm:col-span-2">
+                <div :class="form.plan_id ? 'sm:col-span-1' : 'sm:col-span-2'">
                     <label class="block text-sm text-gray-300 font-medium mb-2">Select Initial Plan Tier</label>
-                    <select x-model="form.plan_id" class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-3 text-sm focus:border-brandRed outline-none">
+                    <select x-model="form.plan_id" @change="onPlanSelect()" class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-3 text-sm focus:border-brandRed outline-none">
                         <option value="">None (Register as Inactive/Lead)</option>
                         <template x-for="plan in plans" :key="plan.id">
                             <option :value="plan.id" x-text="plan.name + ' (' + plan.price + ' EGP)'"></option>
                         </template>
                     </select>
+                </div>
+                <!-- Initial Paid Amount -->
+                <div sm:col-span-1 x-show="form.plan_id">
+                    <label class="block text-sm text-gray-300 font-medium mb-2">Initial Paid Amount (EGP)</label>
+                    <input type="number" step="0.01" min="0" x-model.number="form.paid_amount" placeholder="0.00"
+                           class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-3 text-sm focus:border-brandRed outline-none font-mono">
                 </div>
             </div>
 
@@ -90,7 +96,19 @@
                 gender: 'male',
                 weight: null,
                 notes: '',
-                plan_id: ''
+                plan_id: '',
+                paid_amount: null
+            },
+
+            onPlanSelect() {
+                if (this.form.plan_id) {
+                    const selected = this.plans.find(x => x.id === this.form.plan_id);
+                    if (selected) {
+                        this.form.paid_amount = parseFloat(selected.price);
+                    }
+                } else {
+                    this.form.paid_amount = null;
+                }
             },
 
             init() {
@@ -118,7 +136,8 @@
                     gender: this.form.gender,
                     weight: this.form.weight ? parseFloat(this.form.weight) : null,
                     notes: this.form.notes || null,
-                    plan_id: this.form.plan_id || null
+                    plan_id: this.form.plan_id || null,
+                    paid_amount: this.form.plan_id && this.form.paid_amount !== null ? parseFloat(this.form.paid_amount) : null
                 };
 
                 try {
