@@ -522,7 +522,7 @@ async def delete_member_measurement(
     res = await db.execute(stmt)
     record = res.scalar_one_or_none()
     
-     if not record:
+    if not record:
         raise HTTPException(status_code=404, detail="Measurement record not found.")
         
     from sqlalchemy import delete
