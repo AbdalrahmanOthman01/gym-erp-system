@@ -1,0 +1,286 @@
+{% extends 'layout/base.html' %}
+{% block title %}Configure Plans | SuperAdmin{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto pb-10 mt-4" x-data="plansApp()">
+
+    <!-- Screen Setup limits -->
+    <div class="flex items-center justify-between mb-8">
+        <div>
+            <h1 class="text-2xl font-bold text-white mb-1"><i class="fa-solid fa-tags mr-2 text-brandRed"></i> Configurable Plans</h1>
+            <p class="text-sm text-gray-400">Establish the specific membership conditions active members can adopt.</p>
+        </div>
+        {% if current_user.role.value == 'superadmin' %}
+        <button @click="openModal('add')" class="bg-brandRed hover:bg-brandRed-hover text-white px-5 py-2.5 rounded-md font-semibold text-sm transition shadow-lg shadow-brandRed/20 flex items-center">
+            <i class="fa-solid fa-plus mr-2"></i> Register Template
+        </button>
+        {% endif %}
+    </div>
+
+    <!-- Master Plans Card CSS Mapping perfectly styled logic constraint matching UI limits natively-->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <template x-for="plan in plans" :key="plan.id">
+            <div :class="plan.is_active ? 'border-green-500' : 'border-gray-600'" class="bg-panel border-t-[4px] border-x border-b border-borderMuted rounded-b-xl shadow relative p-6 flex flex-col justify-between min-h-[350px] transition duration-150">
+                <div>
+                    <span :class="plan.is_active ? 'bg-[#14321d] border-green-800 text-green-500' : 'bg-zinc-800/80 border-zinc-700 text-gray-400'"
+                          class="px-2.5 py-1 border rounded font-bold text-[10px] uppercase tracking-wider inline-flex mb-2"
+                          x-text="plan.is_active ? 'SYSTEM ACTIVE TIER' : 'SYSTEM INACTIVE TIER'"></span>
+                    <h2 class="text-2xl font-bold text-white truncate" :title="plan.name" x-text="plan.name"></h2>
+                    
+                    <div class="my-5 border-b border-borderMuted pb-5">
+                        <p class="text-4xl font-black text-white leading-none flex items-end">
+                            <span x-text="plan.price"></span> <span class="text-lg text-gray-500 font-semibold ml-1">EGP</span>
+                        </p>
+                        <p class="text-gray-400 text-xs mt-2 uppercase font-semibold tracking-wider bg-sidebar inline-block px-2 py-1 rounded"
+                           x-text="(plan.duration_days ? plan.duration_days + ' Days' : 'Lifetime') + ' | ' + (plan.sessions_limit ? plan.sessions_limit + ' Sessions' : 'Unlimited Check-ins')">
+                        </p>
+                    </div>
+
+                    <!-- Features Array Limits strict boundaries -->
+                    <ul class="space-y-4 mb-8 text-[13px] font-medium text-gray-300">
+                        <li class="flex items-start">
+                            <i class="fa-solid fa-check text-green-500 mt-1 mr-3 text-xs w-4"></i>
+                            <span x-text="plan.freeze_days > 0 ? plan.freeze_days + ' Days maximum pause / freeze period allowable' : 'No pause / freeze days allowable'"></span>
+                        </li>
+                        <li class="flex items-start" :class="plan.description ? 'text-gray-300' : 'text-gray-500'">
+                            <i class="fa-solid mt-1 mr-3 text-xs w-4" :class="plan.description ? 'fa-info-circle text-blue-400' : 'fa-xmark text-brandRed'"></i>
+                            <span class="line-clamp-2" :title="plan.description" x-text="plan.description || 'No description provided'"></span>
+                        </li>
+                    </ul>
+                </div>
+
+                {% if current_user.role.value == 'superadmin' %}
+                <button @click="openModal('edit', plan)" class="w-full bg-sidebar border border-borderMuted hover:border-gray-500 hover:text-white text-gray-400 py-3 rounded font-bold transition flex items-center justify-center mt-auto">
+                    <i class="fa-solid fa-gear mr-2"></i> Configure Prices
+                </button>
+                {% endif %}
+            </div>
+        </template>
+        
+        <div x-show="plans.length === 0" class="col-span-full py-12 text-center text-gray-500">
+            <i class="fa-solid fa-tags text-4xl mb-3 block text-gray-600"></i>
+            No membership plan templates created yet.
+        </div>
+    </div>
+
+    <!-- Modal (Add / Edit) -->
+    <div class="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" x-show="showModal" x-transition style="display: none;">
+        <div class="bg-panel border border-borderMuted w-full max-w-lg rounded-xl shadow-2xl overflow-hidden" @click.away="showModal = false">
+            <div class="h-16 px-6 border-b border-borderMuted flex items-center justify-between">
+                <h3 class="text-white font-bold text-lg" x-text="modalMode === 'add' ? 'Register New Plan Template' : 'Modify Plan Configuration'"></h3>
+                <button @click="showModal = false" class="text-gray-400 hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            
+            <form @submit.prevent="submitForm()" class="p-6 space-y-4">
+                <!-- Name -->
+                <div>
+                    <label class="block text-sm text-gray-300 font-medium mb-1.5">Plan Name</label>
+                    <input type="text" x-model="form.name" required placeholder="e.g. Monthly Ultimate"
+                           class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-3 text-sm focus:border-brandRed outline-none">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <!-- Price -->
+                    <div>
+                        <label class="block text-sm text-gray-300 font-medium mb-1.5">Price (EGP)</label>
+                        <input type="number" step="0.01" min="0" x-model.number="form.price" required placeholder="e.g. 800.00"
+                               class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-3 text-sm focus:border-brandRed outline-none">
+                    </div>
+                    <!-- Freeze Days -->
+                    <div>
+                        <label class="block text-sm text-gray-300 font-medium mb-1.5">Freeze Days Allowable</label>
+                        <input type="number" min="0" x-model.number="form.freeze_days" required placeholder="e.g. 5"
+                               class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-3 text-sm focus:border-brandRed outline-none">
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <!-- Duration Days -->
+                    <div>
+                        <label class="block text-sm text-gray-300 font-medium mb-1.5">Duration (Days)</label>
+                        <input type="number" min="1" x-model="form.duration_days" placeholder="e.g. 30 (Empty for Lifetime)"
+                               class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-3 text-sm focus:border-brandRed outline-none">
+                    </div>
+                    <!-- Sessions Limit -->
+                    <div>
+                        <label class="block text-sm text-gray-300 font-medium mb-1.5">Sessions Limit</label>
+                        <input type="number" min="1" x-model="form.sessions_limit" placeholder="e.g. 12 (Empty for Unlimited)"
+                               class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-3 text-sm focus:border-brandRed outline-none">
+                    </div>
+                </div>
+
+                <!-- Description -->
+                <div>
+                    <label class="block text-sm text-gray-300 font-medium mb-1.5">Description (Optional)</label>
+                    <textarea x-model="form.description" rows="3" placeholder="Describe the plan terms, limits, etc."
+                              class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-3 text-sm focus:border-brandRed outline-none resize-none"></textarea>
+                </div>
+
+                <!-- Active Status Toggle (only in Edit mode) -->
+                <div class="flex items-center justify-between py-2 border-t border-borderMuted/60 mt-4" x-show="modalMode === 'edit'">
+                    <div>
+                        <p class="text-sm font-semibold text-white">Active Status</p>
+                        <p class="text-xs text-gray-500">Allow this plan to be assigned to gym members</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" x-model="form.is_active" class="sr-only peer">
+                        <div class="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-brandRed peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brandRed"></div>
+                    </label>
+                </div>
+
+                <div class="flex justify-between items-center pt-4 border-t border-borderMuted/60 mt-6">
+                    <!-- Left side delete/deactivate button (only in edit mode) -->
+                    <div>
+                        <button type="button" x-show="modalMode === 'edit'" @click="deletePlan(selectedPlanId)" 
+                                class="bg-red-950/40 text-brandRed border border-brandRed/30 hover:bg-brandRed hover:text-white px-4 py-2.5 rounded text-sm font-semibold transition">
+                            <i class="fa-solid fa-trash mr-1.5"></i> Deactivate
+                        </button>
+                    </div>
+
+                    <!-- Right side save/cancel buttons -->
+                    <div class="flex space-x-3">
+                        <button type="button" @click="showModal = false" class="px-4 py-2.5 rounded text-sm text-gray-400 hover:text-white transition">Cancel</button>
+                        <button type="submit" :disabled="submitting" class="bg-brandRed hover:bg-brandRed-hover text-white px-6 py-2.5 rounded text-sm font-semibold transition shadow-lg shadow-brandRed/20 disabled:opacity-50">
+                            <span x-show="!submitting">Save Template</span>
+                            <span x-show="submitting"><i class="fa-solid fa-circle-notch fa-spin mr-1.5"></i> Saving...</span>
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function plansApp() {
+        return {
+            plans: [],
+            showModal: false,
+            modalMode: 'add',
+            selectedPlanId: null,
+            submitting: false,
+            form: {
+                name: '',
+                price: '',
+                duration_days: '',
+                sessions_limit: '',
+                freeze_days: 0,
+                description: '',
+                is_active: true
+            },
+
+            init() {
+                this.fetchPlans();
+            },
+
+            async fetchPlans() {
+                try {
+                    const res = await ApiAgent.call('/api/v1/plans');
+                    if (res) {
+                        this.plans = await res.json();
+                    }
+                } catch (err) {
+                    console.error("Failed fetching plans:", err);
+                    showToast('Failed to load membership plans.', 'error');
+                }
+            },
+
+            openModal(mode, plan = null) {
+                this.modalMode = mode;
+                this.selectedPlanId = plan ? plan.id : null;
+                
+                if (plan) {
+                    this.form = {
+                        name: plan.name,
+                        price: plan.price,
+                        duration_days: plan.duration_days !== null ? plan.duration_days : '',
+                        sessions_limit: plan.sessions_limit !== null ? plan.sessions_limit : '',
+                        freeze_days: plan.freeze_days,
+                        description: plan.description || '',
+                        is_active: plan.is_active
+                    };
+                } else {
+                    this.form = {
+                        name: '',
+                        price: '',
+                        duration_days: '',
+                        sessions_limit: '',
+                        freeze_days: 0,
+                        description: '',
+                        is_active: true
+                    };
+                }
+                this.showModal = true;
+            },
+
+            async submitForm() {
+                this.submitting = true;
+                
+                // Construct clean payload matching Pydantic validation expectations
+                const payload = {
+                    name: this.form.name,
+                    price: parseFloat(this.form.price) || 0.0,
+                    duration_days: this.form.duration_days === "" || this.form.duration_days === null ? null : parseInt(this.form.duration_days),
+                    sessions_limit: this.form.sessions_limit === "" || this.form.sessions_limit === null ? null : parseInt(this.form.sessions_limit),
+                    freeze_days: parseInt(this.form.freeze_days) || 0,
+                    description: this.form.description || null
+                };
+
+                if (this.modalMode === 'edit') {
+                    payload.is_active = this.form.is_active;
+                }
+
+                try {
+                    const method = this.modalMode === 'add' ? 'POST' : 'PUT';
+                    const url = this.modalMode === 'add' ? '/api/v1/plans' : `/api/v1/plans/${this.selectedPlanId}`;
+
+                    const res = await ApiAgent.call(url, {
+                        method: method,
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (res && (res.status === 200 || res.status === 201)) {
+                        showToast(`Membership plan ${this.modalMode === 'add' ? 'created' : 'updated'} successfully!`, 'success');
+                        this.showModal = false;
+                        this.fetchPlans();
+                    } else if (res) {
+                        const err = await res.json();
+                        showToast(err.detail || 'Error saving membership plan template.', 'error');
+                    }
+                } catch (err) {
+                    console.error("Failed to commit membership plan template:", err);
+                    showToast('Connection error.', 'error');
+                } finally {
+                    this.submitting = false;
+                }
+            },
+
+            async deletePlan(planId) {
+                if (!confirm("Are you sure you want to deactivate this membership plan template? Active members will keep their plans, but new members cannot select it.")) return;
+                try {
+                    const res = await ApiAgent.call(`/api/v1/plans/${planId}`, {
+                        method: 'DELETE'
+                    });
+                    if (res && res.status === 200) {
+                        showToast('Membership plan successfully deactivated.', 'success');
+                        this.showModal = false;
+                        this.fetchPlans();
+                    } else if (res) {
+                        const err = await res.json();
+                        showToast(err.detail || 'Could not deactivate plan template.', 'error');
+                    }
+                } catch (err) {
+                    console.error("Failed deactivate plan call:", err);
+                    showToast('Network request dropped.', 'error');
+                }
+            }
+        };
+    }
+</script>
+{% endblock %}

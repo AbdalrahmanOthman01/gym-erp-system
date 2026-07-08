@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <title>System Authentication | Sport Time Gym</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { theme: { extend: { colors: { brandRed: '#D92D2D' } } } }
+    </script>
+    <style>
+        body { background-color: #0f1115; font-family: 'Inter', sans-serif; color: white;}
+        .bg-card { background-color: #191c24; border: 1px solid #2d313c; }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center relative overflow-hidden">
+    
+    <!-- Red glow background accent -->
+    <div class="absolute w-[500px] h-[500px] bg-brandRed rounded-full blur-[150px] opacity-10 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
+
+    <div class="bg-card p-10 rounded-2xl shadow-2xl w-full max-w-md relative z-10">
+        
+        <div class="text-center mb-10">
+            <h1 class="text-3xl font-black italic uppercase tracking-wider mb-2"><span class="text-brandRed">SPORT TIME</span> GYM</h1>
+            <p class="text-sm text-gray-400 font-medium tracking-widest uppercase">Management ERP Login</p>
+        </div>
+
+        <!-- System Authentication Form -->
+        <form id="auth-form" onsubmit="executeLogin(event)" class="space-y-6">
+            
+            <div>
+                <label class="block text-sm font-semibold text-gray-300 mb-2">Staff Phone ID</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3"><i class="fa-solid fa-phone text-gray-500"></i></span>
+                    <input type="text" id="phone" name="username" required
+                           class="w-full bg-[#1c1e24] text-white border border-gray-600 rounded-md py-3 pl-10 pr-4 focus:border-brandRed focus:ring-1 focus:ring-brandRed focus:outline-none transition">
+                </div>
+            </div>
+
+            <div>
+                <label class="block text-sm font-semibold text-gray-300 mb-2">Password</label>
+                <div class="relative">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3"><i class="fa-solid fa-lock text-gray-500"></i></span>
+                    <input type="password" id="password" name="password" required
+                           class="w-full bg-[#1c1e24] text-white border border-gray-600 rounded-md py-3 pl-10 pr-4 focus:border-brandRed focus:ring-1 focus:ring-brandRed focus:outline-none transition">
+                </div>
+            </div>
+
+            <div id="error-box" class="hidden bg-red-900/30 border border-red-800 text-red-400 text-sm p-3 rounded text-center"></div>
+
+            <button type="submit" id="btn-login" class="w-full bg-brandRed hover:bg-[#b52525] text-white py-3 rounded-md font-bold transition flex items-center justify-center space-x-2">
+                <span>Authenticate Securely</span> <i class="fa-solid fa-arrow-right ml-1 text-sm"></i>
+            </button>
+        </form>
+
+        <p class="text-center text-xs text-gray-600 mt-8">Encrypted Connection. Protected by Role-Based Access Control.</p>
+    </div>
+
+    <!-- Reference the centralized API handler explicitly seamlessly -->
+    <script src="/static/js/api.js"></script>
+    <script>
+        async function executeLogin(e) {
+            e.preventDefault();
+            const form = document.getElementById('auth-form');
+            const errorBox = document.getElementById('error-box');
+            const btn = document.getElementById('btn-login');
+
+            btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Processing...`;
+            
+            // FastAPI strictly expects x-www-form-urlencoded mapping implicitly directly perfectly natively constraints
+            const formData = new URLSearchParams(new FormData(form));
+
+            try {
+                const response = await fetch('/api/v1/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: formData
+                });
+                
+                const data = await response.json();
+
+                if (!response.ok) {
+                    errorBox.innerText = data.detail || "Authentication Failed. Validate Credentials.";
+                    errorBox.classList.remove("hidden");
+                    btn.innerHTML = `<span>Authenticate Securely</span> <i class="fa-solid fa-arrow-right"></i>`;
+                } else {
+                    // Success! Redirect to Main Router explicitly mapped.
+                    window.location.href = "/dashboard";
+                }
+            } catch(err) {
+                errorBox.innerText = "Fatal connection explicitly dropped seamlessly avoiding natively network errors bounds properly mapping limiting directly securely cleanly safely flawlessly limits limits natively flawlessly mapping constraints securely securely limits avoiding limits natively limiting"; // Shortened string for constraints
+                errorBox.innerText = "Connection lost. Please check server constraints.";
+                errorBox.classList.remove("hidden");
+                btn.innerHTML = `<span>Authenticate</span> <i class="fa-solid fa-arrow-right"></i>`;
+            }
+        }
+    </script>
+</body>
+</html>

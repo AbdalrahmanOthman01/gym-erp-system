@@ -1,0 +1,91 @@
+<header class="h-20 shrink-0 border-b border-borderMuted bg-sidebar flex items-center justify-between px-6 z-40 sticky top-0" x-data="globalNavbarApp()">
+    
+    <!-- Mobile Hamburger Toggle (Visible only on small screens) -->
+    <button class="text-gray-400 hover:text-white sm:hidden mr-4">
+        <i class="fa-solid fa-bars text-xl"></i>
+    </button>
+
+    <!-- Global Member Search Bar -->
+    <div class="flex-1 max-w-lg">
+        <div class="relative group">
+            <span class="absolute inset-y-0 left-0 flex items-center pl-3">
+                <i class="fa-solid fa-magnifying-glass text-gray-500 group-focus-within:text-white transition-colors"></i>
+            </span>
+            <input type="text" 
+                   class="w-full bg-background text-white border border-borderMuted rounded-md py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:border-brandRed focus:ring-1 focus:ring-brandRed placeholder-gray-500 transition-all shadow-sm"
+                   placeholder="Search member..."
+                   @keydown.enter="window.location.href='/members?search=' + encodeURIComponent($el.value)">
+        </div>
+    </div>
+
+    <!-- Right Controls: Notifications & Profile -->
+    <div class="flex items-center space-x-6 ml-auto">
+        
+        <!-- Icon Actions (Bell & Envelope matching Image) -->
+        <div class="flex items-center space-x-5">
+            <button @click="window.location.href='/notifications'" class="relative text-gray-400 hover:text-white transition" title="System Notifications">
+                <i class="fa-regular fa-bell text-xl"></i>
+                <!-- Red Alert Badge -->
+                <span x-show="bellCount > 0" x-text="bellCount" class="absolute -top-1.5 -right-2 bg-brandRed text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border-[2px] border-sidebar leading-none" style="display: none;"></span>
+            </button>
+
+            <button class="relative text-gray-400 hover:text-white transition" title="Messages (0)" @click="showToast('Message center is offline.', 'warning')">
+                <i class="fa-regular fa-envelope text-xl"></i>
+            </button>
+        </div>
+
+        <!-- User Profile Dropdown Component -->
+        <div class="flex items-center pl-6 border-l border-borderMuted cursor-pointer hover:opacity-80 transition" 
+             {% if current_user.role.value == 'superadmin' %}@click="window.location.href='/settings'"{% endif %}>
+            <div class="relative">
+                <img src="/static/images/profile-admin.png" 
+                     onerror="this.src='https://ui-avatars.com/api/?name={{ current_user.full_name | urlencode }}&background=2d313c&color=fff'" 
+                     alt="Admin Profile" 
+                     class="w-10 h-10 rounded-full border border-borderMuted object-cover">
+                <!-- Small green online indicator badge -->
+                <div class="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 border-2 border-sidebar rounded-full"></div>
+            </div>
+            
+            <div class="ml-3 hidden md:block">
+                <p class="text-sm text-white font-semibold leading-tight">{{ current_user.full_name }}</p>
+                <p class="text-xs text-gray-400 mt-0.5 leading-tight uppercase font-bold tracking-wider text-[10px]" x-text="formatRole('{{ current_user.role.value }}')"></p>
+            </div>
+            
+            <i class="fa-solid fa-chevron-down text-gray-500 text-xs ml-4 hidden md:block"></i>
+        </div>
+
+    </div>
+</header>
+
+<script>
+    function globalNavbarApp() {
+        return {
+            bellCount: 0,
+
+            init() {
+                this.fetchBellCount();
+                // Poll for notification count every 30 seconds
+                setInterval(() => this.fetchBellCount(), 30000);
+            },
+
+            async fetchBellCount() {
+                try {
+                    const res = await ApiAgent.call('/api/v1/notifications/count');
+                    if (res) {
+                        const data = await res.json();
+                        this.bellCount = data.count;
+                    }
+                } catch(err) {
+                    console.error("Navbar failed loading notifications count:", err);
+                }
+            },
+
+            formatRole(role) {
+                if (role === 'superadmin') return 'Super Admin';
+                if (role === 'accountant_m') return 'Accountant (M)';
+                if (role === 'accountant_f') return 'Accountant (F)';
+                return role;
+            }
+        };
+    }
+</script>

@@ -1,0 +1,357 @@
+{% extends 'layout/base.html' %}
+{% block title %}Log Revenue & Ledger | Sport Time Gym{% endblock %}
+
+{% block content %}
+<div class="max-w-[1600px] mx-auto pb-10 mt-6" x-data="paymentLedgerApp()">
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-white mb-2"><i class="fa-solid fa-cash-register mr-2 text-brandRed"></i> Finance Ledger & Log Revenue</h1>
+        <p class="text-sm text-gray-400">Capture manual cash deposits or physical POS Visa swipes into system analytics, and audit unified revenue ledger.</p>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Log Revenue/Expense Form Panel (Left/1 Column) -->
+        <div class="lg:col-span-1">
+            <div class="bg-panel border border-borderMuted rounded-xl p-6 shadow-md">
+                <!-- Form Tabs Toggle -->
+                <div class="flex space-x-2 border-b border-borderMuted pb-3 mb-4">
+                    <button @click="activeFormTab = 'income'" :class="activeFormTab === 'income' ? 'bg-green-600 text-white font-bold' : 'bg-sidebar text-gray-400 border border-borderMuted'" class="flex-1 py-2 text-xs rounded transition flex items-center justify-center">
+                        <i class="fa-solid fa-cash-register mr-1.5"></i> Log Income
+                    </button>
+                    <button @click="activeFormTab = 'expense'" :class="activeFormTab === 'expense' ? 'bg-red-600 text-white font-bold' : 'bg-sidebar text-gray-400 border border-borderMuted'" class="flex-1 py-2 text-xs rounded transition flex items-center justify-center">
+                        <i class="fa-solid fa-file-invoice-dollar mr-1.5"></i> Log Expense
+                    </button>
+                </div>
+                
+                <!-- INCOME FORM -->
+                <form @submit.prevent="submitPayment()" class="space-y-4" x-show="activeFormTab === 'income'">
+                    <!-- Target Gym Member -->
+                    <div>
+                        <label class="block text-xs text-gray-400 font-semibold mb-1.5 uppercase">Target Gym Member</label>
+                        <select x-model="form.member_id" required class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-2.5 text-sm focus:border-brandRed outline-none">
+                            <option value="">-- Choose Member --</option>
+                            <template x-for="member in members" :key="member.id">
+                                <option :value="member.id" x-text="member.full_name + ' (' + member.phone + ')' + (member.balance > 0 ? ' [Owes ' + member.balance + ' EGP]' : '')"></option>
+                            </template>
+                        </select>
+                    </div>
+
+                    <!-- Associated Membership Plan (Optional) -->
+                    <div>
+                        <label class="block text-xs text-gray-400 font-semibold mb-1.5 uppercase">Associated Plan Renewal (Optional)</label>
+                        <select x-model="form.plan_id" @change="onPlanSelect()" class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-2.5 text-sm focus:border-brandRed outline-none">
+                            <option value="">None (Custom Financial Log / Installment)</option>
+                            <template x-for="plan in plans" :key="plan.id">
+                                <option :value="plan.id" x-text="plan.name + ' (' + plan.price + ' EGP)'"></option>
+                            </template>
+                        </select>
+                    </div>
+
+                    <!-- Start Date Picker (Only visible for plan renewals) -->
+                    <div x-show="form.plan_id">
+                        <label class="block text-xs text-gray-400 font-semibold mb-1.5 uppercase">Membership Start Date</label>
+                        <input type="date" x-model="form.start_date" class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-2.5 text-sm focus:border-brandRed outline-none">
+                    </div>
+
+                    <!-- Monetary value -->
+                    <div>
+                        <label class="block text-xs text-gray-400 font-semibold mb-1.5 uppercase">Transaction Amount</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 font-semibold text-gray-500 text-sm">EGP</span>
+                            <input type="number" step="0.01" min="0.01" x-model.number="form.amount" required placeholder="0.00" 
+                                   class="w-full bg-[#1c1e24] text-white font-mono border border-borderMuted rounded py-2.5 pl-12 pr-4 text-sm focus:border-green-500 outline-none">
+                        </div>
+                    </div>
+
+                    <!-- Payment Method -->
+                    <div>
+                        <label class="block text-xs text-gray-400 font-semibold mb-1.5 uppercase">Hardware Payment Type</label>
+                        <select x-model="form.payment_method" required class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-2.5 text-sm focus:border-green-500 outline-none">
+                            <option value="Cash">Physical Cash</option>
+                            <option value="Card">Visa / Card swipe / Instapay</option>
+                            <option value="Administrative Exception">Administrative Exception</option>
+                        </select>
+                    </div>
+
+                    <!-- Internal Accountant Notes -->
+                    <div>
+                        <label class="block text-xs text-gray-400 font-semibold mb-1.5 uppercase">Internal Accountant Notes</label>
+                        <textarea rows="3" x-model="form.notes" class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-3 text-sm focus:border-brandRed outline-none placeholder-gray-600" 
+                                  placeholder="Notes relating to receipt intake details..."></textarea>
+                    </div>
+
+                    <button type="submit" :disabled="submitting" 
+                            class="w-full bg-green-600 hover:bg-green-500 text-white py-3 rounded-lg text-sm font-bold transition shadow-lg shadow-green-600/20 disabled:opacity-50 mt-4">
+                        <span x-show="!submitting"><i class="fa-solid fa-check mr-1.5"></i> Log & Commit Revenue</span>
+                        <span x-show="submitting"><i class="fa-solid fa-circle-notch fa-spin mr-1.5"></i> Processing...</span>
+                    </button>
+                </form>
+
+                <!-- EXPENSE FORM -->
+                <form @submit.prevent="submitExpense()" class="space-y-4" x-show="activeFormTab === 'expense'" style="display: none;">
+                    <!-- Expense Category -->
+                    <div>
+                        <label class="block text-xs text-gray-400 font-semibold mb-1.5 uppercase">Category</label>
+                        <select x-model="expenseForm.category" required class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-2.5 text-sm focus:border-brandRed outline-none">
+                            <option value="Rent">Rent</option>
+                            <option value="Utilities">Utilities & Electricity</option>
+                            <option value="Salaries">Staff Salaries</option>
+                            <option value="Maintenance">Maintenance & Cleaning</option>
+                            <option value="Inventory">Inventory Purchase</option>
+                            <option value="Other">Other Expenses</option>
+                        </select>
+                    </div>
+
+                    <!-- Expense Amount -->
+                    <div>
+                        <label class="block text-xs text-gray-400 font-semibold mb-1.5 uppercase">Outflow Amount</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 font-semibold text-gray-500 text-sm">EGP</span>
+                            <input type="number" step="0.01" min="0.01" x-model.number="expenseForm.amount" required placeholder="0.00" 
+                                   class="w-full bg-[#1c1e24] text-white font-mono border border-borderMuted rounded py-2.5 pl-12 pr-4 text-sm focus:border-red-500 outline-none">
+                        </div>
+                    </div>
+
+                    <!-- Description / Notes -->
+                    <div>
+                        <label class="block text-xs text-gray-400 font-semibold mb-1.5 uppercase">Notes / Explanations</label>
+                        <textarea rows="3" x-model="expenseForm.notes" class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-3 text-sm focus:border-brandRed outline-none placeholder-gray-600" 
+                                  placeholder="Rent payment, plumbing fixes, electrical fixtures..."></textarea>
+                    </div>
+
+                    <button type="submit" :disabled="submittingExpense" 
+                            class="w-full bg-red-650 hover:bg-red-500 text-white py-3 rounded-lg text-sm font-bold transition shadow-lg shadow-red-600/20 disabled:opacity-50 mt-4">
+                        <span x-show="!submittingExpense"><i class="fa-solid fa-check mr-1.5"></i> Log & Commit Expense</span>
+                        <span x-show="submittingExpense"><i class="fa-solid fa-circle-notch fa-spin mr-1.5"></i> Logging...</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Unified Revenue Ledger History (Right/2 Columns) -->
+        <div class="lg:col-span-2">
+            <div class="bg-panel border border-borderMuted rounded-xl shadow-sm flex flex-col min-h-[500px]">
+                <div class="p-4 border-b border-borderMuted flex items-center justify-between">
+                    <h3 class="text-base font-bold text-white"><i class="fa-solid fa-receipt mr-2 text-gray-400"></i> Unified Transaction Ledger History</h3>
+                    <button @click="fetchLedger()" class="text-xs text-gray-400 hover:text-white transition flex items-center bg-sidebar border border-borderMuted px-2.5 py-1.5 rounded">
+                        <i class="fa-solid fa-arrows-rotate mr-1"></i> Refresh Ledger
+                    </button>
+                </div>
+                
+                <div class="overflow-x-auto flex-grow">
+                    <table class="w-full text-left text-sm whitespace-nowrap">
+                        <thead class="bg-[#1c1e24] border-b border-borderMuted text-gray-400 font-semibold text-[11px] uppercase tracking-wider">
+                            <tr>
+                                <th class="px-6 py-3">Member Details</th>
+                                <th class="px-6 py-3">Transaction Type</th>
+                                <th class="px-6 py-3 font-mono">Total Paid</th>
+                                <th class="px-6 py-3 font-mono">Profit</th>
+                                <th class="px-6 py-3">Processed By</th>
+                                <th class="px-6 py-3">Date</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-borderMuted text-gray-300">
+                            <template x-for="item in ledger" :key="item.id">
+                                <tr class="hover:bg-[#1f232d] transition duration-100">
+                                    <td class="px-6 py-3">
+                                        <div>
+                                            <p class="font-semibold text-white text-[13px]" x-text="item.member_name"></p>
+                                            <p class="text-[10px] text-gray-500 font-mono mt-0.5" x-text="item.phone"></p>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-3">
+                                        <div class="flex items-center space-x-2">
+                                            <span :class="{
+                                                'bg-[#14321d] text-green-400 border-green-800/40': item.type === 'Membership Payment',
+                                                'bg-[#112a46] text-[#4d9eef] border-[#2563eb]/20': item.type === 'Merchandise POS',
+                                                'bg-[#3c151b] text-red-400 border-red-800/40': item.type === 'Expense Outflow'
+                                            }" class="px-2 py-0.5 rounded text-[10px] font-bold border" x-text="item.type"></span>
+                                            <span class="text-[10px] text-gray-500" x-text="'(' + item.payment_method + ')'"></span>
+                                        </div>
+                                    </td>
+                                    <td class="px-6 py-3 font-mono text-[13px] font-bold" :class="item.profit < 0 ? 'text-red-400' : 'text-white'" x-text="(item.profit < 0 ? '-' : '') + item.amount.toFixed(2) + ' EGP'"></td>
+                                    <td class="px-6 py-3 font-mono text-[13px] font-semibold" :class="item.profit < 0 ? 'text-red-450' : 'text-green-400'" x-text="(item.profit >= 0 ? '+' : '') + item.profit.toFixed(2) + ' EGP'"></td>
+                                    <td class="px-6 py-3 text-xs text-gray-400" x-text="item.processed_by"></td>
+                                    <td class="px-6 py-3 text-xs text-gray-500 font-mono" x-text="item.timestamp"></td>
+                                </tr>
+                            </template>
+                            <tr x-show="ledger.length === 0">
+                                <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                                    <i class="fa-solid fa-receipt text-3xl mb-3 block text-gray-600"></i>
+                                    No financial items found in the ledger database.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function paymentLedgerApp() {
+        return {
+            members: [],
+            plans: [],
+            ledger: [],
+            submitting: false,
+            submittingExpense: false,
+            activeFormTab: 'income',
+            form: {
+                member_id: '',
+                amount: 0.00,
+                payment_method: 'Cash',
+                notes: '',
+                plan_id: '',
+                start_date: new Date().toISOString().split('T')[0]
+            },
+            expenseForm: {
+                category: 'Rent',
+                amount: null,
+                notes: ''
+            },
+
+            init() {
+                this.fetchMembers();
+                this.fetchPlans();
+                this.fetchLedger();
+                // Hook to sockets refresh
+                window.refreshDashboard = () => {
+                    this.fetchLedger();
+                };
+            },
+
+            async fetchMembers() {
+                try {
+                    const res = await ApiAgent.call('/api/v1/members');
+                    if (res) {
+                        this.members = await res.json();
+                    }
+                } catch (err) {
+                    console.error("Ledger members load error:", err);
+                }
+            },
+
+            async fetchPlans() {
+                try {
+                    const res = await ApiAgent.call('/api/v1/members/plans/active');
+                    if (res) {
+                        this.plans = await res.json();
+                    }
+                } catch (err) {
+                    console.error("Ledger plans load error:", err);
+                }
+            },
+
+            async fetchLedger() {
+                try {
+                    const res = await ApiAgent.call('/api/v1/payments/ledger');
+                    if (res) {
+                        this.ledger = await res.json();
+                    }
+                } catch (err) {
+                    console.error("Ledger logs load error:", err);
+                }
+            },
+
+            onPlanSelect() {
+                if (this.form.plan_id) {
+                    const selected = this.plans.find(x => x.id === this.form.plan_id);
+                    if (selected) {
+                        this.form.amount = selected.price;
+                        this.form.notes = `Subscription renewal deposit for plan: ${selected.name}`;
+                        this.form.start_date = new Date().toISOString().split('T')[0];
+                    }
+                } else {
+                    this.form.amount = 0.00;
+                    this.form.notes = '';
+                }
+            },
+
+            async submitPayment() {
+                if (!this.form.member_id || this.form.amount <= 0) return;
+                this.submitting = true;
+
+                const payload = {
+                    member_id: this.form.member_id,
+                    amount: this.form.amount,
+                    payment_method: this.form.payment_method,
+                    notes: this.form.notes || null,
+                    plan_id: this.form.plan_id || null,
+                    start_date: this.form.plan_id ? this.form.start_date : null
+                };
+
+                try {
+                    const res = await ApiAgent.call('/api/v1/payments/manual', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (res && res.status === 200) {
+                        showToast('Revenue logged and subscription updated!', 'success');
+                        this.form = {
+                            member_id: '',
+                            amount: 0.00,
+                            payment_method: 'Cash',
+                            notes: '',
+                            plan_id: '',
+                            start_date: new Date().toISOString().split('T')[0]
+                        };
+                        this.fetchLedger();
+                        this.fetchMembers(); // refresh member list status
+                    } else if (res) {
+                        const err = await res.json();
+                        showToast(err.detail || 'Could not log revenue payment.', 'error');
+                    }
+                } catch (err) {
+                    console.error("Failed manual payment commit:", err);
+                    showToast('Connection failed.', 'error');
+                } finally {
+                    this.submitting = false;
+                }
+            },
+
+            async submitExpense() {
+                if (this.expenseForm.amount <= 0) return;
+                this.submittingExpense = true;
+
+                const payload = {
+                    amount: this.expenseForm.amount,
+                    category: this.expenseForm.category,
+                    notes: this.expenseForm.notes || null
+                };
+
+                try {
+                    const res = await ApiAgent.call('/api/v1/expenses', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (res && res.status === 200) {
+                        showToast('Expense logged successfully!', 'success');
+                        this.expenseForm = {
+                            category: 'Rent',
+                            amount: null,
+                            notes: ''
+                        };
+                        this.fetchLedger();
+                    } else if (res) {
+                        const err = await res.json();
+                        showToast(err.detail || 'Could not log expense.', 'error');
+                    }
+                } catch (err) {
+                    console.error("Expense logging failed:", err);
+                    showToast('Connection failed.', 'error');
+                } finally {
+                    this.submittingExpense = false;
+                }
+            }
+        };
+    }
+</script>
+{% endblock %}

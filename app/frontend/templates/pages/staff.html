@@ -1,0 +1,333 @@
+{% extends 'layout/base.html' %}
+
+{% block title %}Staff Management | Sport Time Gym{% endblock %}
+
+{% block content %}
+<div class="max-w-[1600px] mx-auto pb-10" x-data="staffApp()">
+
+    <!-- Header Actions -->
+    <div class="flex flex-col lg:flex-row lg:items-center justify-between mb-8">
+        <div>
+            <h1 class="text-2xl font-semibold text-white mb-1"><i class="fa-solid fa-user-shield mr-2 text-brandRed"></i> Staff Management</h1>
+            <p class="text-sm text-gray-400">View and manage administrators and accountant user accounts.</p>
+        </div>
+        
+        <div class="flex flex-wrap items-center gap-3 mt-4 lg:mt-0">
+            <!-- Search Bar -->
+            <div class="relative w-full sm:w-64">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3">
+                    <i class="fa-solid fa-magnifying-glass text-gray-500"></i>
+                </span>
+                <input type="text" x-model="searchQuery" placeholder="Search name or phone..." 
+                       class="w-full bg-[#1c1e24] text-white border border-borderMuted rounded-md py-2.5 pl-10 pr-4 text-sm focus:border-brandRed focus:ring-1 focus:ring-brandRed transition outline-none">
+            </div>
+
+            <!-- Add New Staff Button -->
+            <button @click="openModal('add')" class="bg-brandRed hover:bg-brandRed-hover text-white px-5 py-2.5 rounded-md text-sm font-medium transition shadow-lg shadow-brandRed/20 flex items-center">
+                <i class="fa-solid fa-plus mr-2"></i> Add Staff Account
+            </button>
+        </div>
+    </div>
+
+    <!-- Staff Table Panel -->
+    <div class="bg-panel border border-borderMuted rounded-xl shadow-sm flex flex-col">
+        <div class="overflow-x-auto min-h-[400px]">
+            <table class="w-full text-left text-sm whitespace-nowrap">
+                
+                <!-- Table Header -->
+                <thead class="bg-[#1c1e24] border-b border-borderMuted text-gray-400 font-semibold text-[12px] uppercase tracking-wider">
+                    <tr>
+                        <th class="px-6 py-4">Staff Details</th>
+                        <th class="px-6 py-4">Contact</th>
+                        <th class="px-6 py-4">System Role</th>
+                        <th class="px-6 py-4">Status</th>
+                        <th class="px-6 py-4">Join Date</th>
+                        <th class="px-6 py-4 text-right">Actions</th>
+                    </tr>
+                </thead>
+
+                <!-- Table Body -->
+                <tbody class="divide-y divide-borderMuted text-gray-300">
+                    <template x-for="staff in filteredStaff()" :key="staff.id">
+                        <tr class="hover:bg-[#1f232d] transition duration-150 group">
+                            
+                            <!-- Profile Details Column -->
+                            <td class="px-6 py-4">
+                                <div class="flex items-center space-x-3 text-white">
+                                    <div class="w-10 h-10 rounded-full border border-gray-600 bg-sidebar flex items-center justify-center text-gray-400 font-bold shrink-0" 
+                                         x-text="staff.full_name.charAt(0).toUpperCase()"></div>
+                                    <div>
+                                        <p class="font-semibold text-[14px]" x-text="staff.full_name"></p>
+                                        <p class="text-[11px] text-gray-500 font-mono mt-0.5" x-text="'ID: ' + staff.id.substring(0,8)"></p>
+                                    </div>
+                                </div>
+                            </td>
+                            
+                            <!-- Contact Info Column -->
+                            <td class="px-6 py-4 text-[13px] space-y-1">
+                                <div class="flex items-center text-gray-300"><i class="fa-solid fa-phone w-5 text-gray-500"></i> <span x-text="staff.phone"></span></div>
+                                <div class="flex items-center text-gray-400"><i class="fa-solid fa-mars w-5 text-gray-500 text-xs"></i> <span class="capitalize" x-text="staff.gender"></span></div>
+                            </td>
+
+                            <!-- Role Badge -->
+                            <td class="px-6 py-4">
+                                <span :class="{
+                                    'bg-red-950 text-brandRed border-brandRed/30': staff.role === 'superadmin',
+                                    'bg-[#112a46] text-[#4d9eef] border-[#2563eb]/20': staff.role === 'accountant_m',
+                                    'bg-pink-950 text-pink-400 border-pink-900/40': staff.role === 'accountant_f'
+                                }" class="inline-flex items-center px-2.5 py-0.5 rounded text-[11px] font-bold border shadow-sm uppercase tracking-wider">
+                                    <span x-text="formatRole(staff.role)"></span>
+                                </span>
+                            </td>
+                            
+                            <!-- Status Badge -->
+                            <td class="px-6 py-4">
+                                <span :class="{
+                                    'bg-green-950 text-green-400 border-green-800/40': staff.status === 'active',
+                                    'bg-red-950 text-red-400 border-red-800/40': staff.status === 'inactive'
+                                }" class="inline-flex items-center px-2.5 py-0.5 rounded text-[11px] font-bold border shadow-sm capitalize">
+                                    <span x-text="staff.status"></span>
+                                </span>
+                            </td>
+                            
+                            <!-- Dates -->
+                            <td class="px-6 py-4 text-[13px] text-gray-400" x-text="staff.join_date"></td>
+                            
+                            <!-- Action Icons -->
+                            <td class="px-6 py-4 text-right space-x-2">
+                                <button @click="openModal('edit', staff)" title="Edit Staff" class="text-gray-500 hover:text-white bg-sidebar border border-transparent hover:border-gray-600 h-8 w-8 rounded transition">
+                                    <i class="fa-solid fa-pen text-xs"></i>
+                                </button>
+                                <button @click="deleteStaff(staff.id)" title="Delete Staff" class="text-gray-500 hover:text-brandRed bg-sidebar border border-transparent hover:border-gray-600 h-8 w-8 rounded transition">
+                                    <i class="fa-solid fa-trash-can text-xs"></i>
+                                </button>
+                            </td>
+                        </tr>
+                    </template>
+
+                    <tr x-show="filteredStaff().length === 0">
+                        <td colspan="6" class="px-6 py-12 text-center text-gray-500">
+                            <i class="fa-solid fa-user-slash text-3xl mb-3 block text-gray-600"></i>
+                            No staff accounts found.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Table Pagination Footer -->
+        <div class="px-6 py-4 border-t border-borderMuted flex flex-col sm:flex-row items-center justify-between text-xs font-semibold text-gray-500 bg-[#16181E] rounded-b-xl">
+            <span class="mb-3 sm:mb-0" x-text="'Showing ' + filteredStaff().length + ' staff members'"></span>
+        </div>
+    </div>
+
+    <!-- Staff Modal (Add / Edit) -->
+    <div class="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" x-show="showModal" x-transition style="display: none;">
+        <div class="bg-panel border border-borderMuted w-full max-w-lg rounded-xl shadow-2xl overflow-hidden" @click.away="showModal = false">
+            <div class="h-16 px-6 border-b border-borderMuted flex items-center justify-between">
+                <h3 class="text-white font-bold text-lg" x-text="modalMode === 'add' ? 'Add Staff Account' : 'Modify Staff Configuration'"></h3>
+                <button @click="showModal = false" class="text-gray-400 hover:text-white transition">
+                    <i class="fa-solid fa-xmark text-lg"></i>
+                </button>
+            </div>
+            
+            <form @submit.prevent="submitForm()" class="p-6 space-y-4">
+                <!-- Name -->
+                <div>
+                    <label class="block text-sm text-gray-300 font-medium mb-1.5">Full Name</label>
+                    <input type="text" x-model="form.full_name" required placeholder="e.g. Captain Jack"
+                           class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-3 text-sm focus:border-brandRed outline-none">
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <!-- Phone -->
+                    <div>
+                        <label class="block text-sm text-gray-300 font-medium mb-1.5">Phone Number (Login ID)</label>
+                        <input type="text" x-model="form.phone" required placeholder="e.g. 01012345678"
+                               class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-3 text-sm focus:border-brandRed outline-none">
+                    </div>
+                    <!-- Gender -->
+                    <div>
+                        <label class="block text-sm text-gray-300 font-medium mb-1.5">Gender</label>
+                        <select x-model="form.gender" required
+                                class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-3 text-sm focus:border-brandRed outline-none">
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 gap-4">
+                    <!-- System Role -->
+                    <div>
+                        <label class="block text-sm text-gray-300 font-medium mb-1.5">System Authorization Role</label>
+                        <select x-model="form.role" required
+                                class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-3 text-sm focus:border-brandRed outline-none">
+                            <option value="superadmin">Super Administrator (Full System Scope)</option>
+                            <option value="accountant_m">Male Shift Accountant (Male Members Scope)</option>
+                            <option value="accountant_f">Female Shift Accountant (Female Members Scope)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Password -->
+                <div>
+                    <label class="block text-sm text-gray-300 font-medium mb-1.5">
+                        <span x-text="modalMode === 'add' ? 'Password' : 'New Password (Leave blank to keep current)'"></span>
+                    </label>
+                    <input type="password" x-model="form.password" :required="modalMode === 'add'" placeholder="Minimum 6 characters"
+                           class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-3 text-sm focus:border-brandRed outline-none">
+                </div>
+
+                <div class="flex justify-end space-x-3 pt-4 border-t border-borderMuted/60 mt-6">
+                    <button type="button" @click="showModal = false" class="px-4 py-2.5 rounded text-sm text-gray-400 hover:text-white transition">Cancel</button>
+                    <button type="submit" :disabled="submitting" class="bg-brandRed hover:bg-brandRed-hover text-white px-6 py-2.5 rounded text-sm font-semibold transition shadow-lg shadow-brandRed/20 disabled:opacity-50">
+                        <span x-show="!submitting">Save Account</span>
+                        <span x-show="submitting"><i class="fa-solid fa-circle-notch fa-spin mr-1.5"></i> Saving...</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function staffApp() {
+        return {
+            staffMembers: [],
+            searchQuery: '',
+            showModal: false,
+            modalMode: 'add',
+            selectedStaffId: null,
+            submitting: false,
+            form: {
+                full_name: '',
+                phone: '',
+                gender: 'male',
+                role: 'accountant_m',
+                password: ''
+            },
+
+            init() {
+                this.fetchStaff();
+            },
+
+            async fetchStaff() {
+                try {
+                    const res = await ApiAgent.call('/api/v1/staff');
+                    if (res) {
+                        this.staffMembers = await res.json();
+                    }
+                } catch (err) {
+                    console.error("Failed to load staff list:", err);
+                }
+            },
+
+            filteredStaff() {
+                if (!this.searchQuery) return this.staffMembers;
+                const query = this.searchQuery.toLowerCase();
+                return this.staffMembers.filter(s => 
+                    s.full_name.toLowerCase().includes(query) || 
+                    s.phone.toLowerCase().includes(query)
+                );
+            },
+
+            formatRole(role) {
+                if (role === 'superadmin') return 'Super Admin';
+                if (role === 'accountant_m') return 'Accountant (Male)';
+                if (role === 'accountant_f') return 'Accountant (Female)';
+                return role;
+            },
+
+            openModal(mode, staff = null) {
+                this.modalMode = mode;
+                this.selectedStaffId = staff ? staff.id : null;
+                
+                if (staff) {
+                    this.form = {
+                        full_name: staff.full_name,
+                        phone: staff.phone,
+                        gender: staff.gender,
+                        role: staff.role,
+                        password: ''
+                    };
+                } else {
+                    this.form = {
+                        full_name: '',
+                        phone: '',
+                        gender: 'male',
+                        role: 'accountant_m',
+                        password: ''
+                    };
+                }
+                this.showModal = true;
+            },
+
+            async submitForm() {
+                this.submitting = true;
+                
+                const payload = {
+                    full_name: this.form.full_name,
+                    phone: this.form.phone,
+                    gender: this.form.gender,
+                    role: this.form.role,
+                };
+
+                // Add password if present or if creating new account
+                if (this.modalMode === 'add' || this.form.password) {
+                    payload.password = this.form.password;
+                } else {
+                    payload.password = null;
+                }
+
+                try {
+                    const method = this.modalMode === 'add' ? 'POST' : 'PUT';
+                    const url = this.modalMode === 'add' ? '/api/v1/staff' : `/api/v1/staff/${this.selectedStaffId}`;
+
+                    const res = await ApiAgent.call(url, {
+                        method: method,
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (res && (res.status === 200 || res.status === 201)) {
+                        showToast(`Staff member ${this.modalMode === 'add' ? 'created' : 'updated'} successfully!`, 'success');
+                        this.showModal = false;
+                        this.fetchStaff();
+                    } else if (res) {
+                        const err = await res.json();
+                        showToast(err.detail || 'Failed to submit staff details.', 'error');
+                    }
+                } catch (err) {
+                    console.error("Failed to commit staff adjustments:", err);
+                    showToast('Connection error.', 'error');
+                } finally {
+                    this.submitting = false;
+                }
+            },
+
+            async deleteStaff(staffId) {
+                if (!confirm("Are you sure you want to delete this staff account? They will lose access immediately.")) return;
+                try {
+                    const res = await ApiAgent.call(`/api/v1/staff/${staffId}`, {
+                        method: 'DELETE'
+                    });
+                    if (res && res.status === 200) {
+                        showToast('Staff member successfully deleted.', 'success');
+                        this.fetchStaff();
+                    } else if (res) {
+                        const err = await res.json();
+                        showToast(err.detail || 'Could not delete staff member.', 'error');
+                    }
+                } catch (err) {
+                    console.error("Failed to delete staff call:", err);
+                    showToast('Network request dropped.', 'error');
+                }
+            }
+        };
+    }
+</script>
+{% endblock %}

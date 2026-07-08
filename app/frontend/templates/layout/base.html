@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}{{ page_title | default("Sport Time Gym ERP") }}{% endblock %}</title>
+    
+    <!-- Google Fonts: Outfit for headings, Inter for body -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Tailwind CSS (CDN load) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        background: '#0c0e12',
+                        panel: '#15181e',
+                        sidebar: '#121418',
+                        borderMuted: '#242831',
+                        brandRed: {
+                            DEFAULT: '#D92D2D',
+                            hover: '#B52525'
+                        },
+                        text: {
+                            muted: '#9CA3AF'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- AlpineJS for modern interactive features -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
+    <!-- Chart.js for visualization dashboards -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0c0e12;
+            color: #E5E7EB;
+        }
+        h1, h2, h3, h4, h5, h6 {
+            font-family: 'Outfit', sans-serif;
+        }
+        /* Custom scrollbar to match sleek UI */
+        ::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #121418;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #242831;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #D92D2D;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+    {% block styles %}{% endblock %}
+</head>
+<body class="min-h-screen flex bg-background">
+
+    <!-- Sidebar Layout -->
+    {% include 'layout/sidebar.html' %}
+
+    <div class="flex-grow flex flex-col min-w-0 overflow-y-auto">
+        <!-- Navbar Layout -->
+        {% include 'layout/navbar.html' %}
+
+        <!-- Content Frame -->
+        <main class="flex-grow p-6">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <!-- Centralized API Interaction Manager -->
+    <script src="/static/js/api.js"></script>
+    <script>
+        async function logoutSystem() {
+            try {
+                await ApiAgent.call('/api/v1/logout', { method: 'POST' });
+                window.location.href = '/';
+            } catch (err) {
+                console.error("Logout execution failed:", err);
+                window.location.href = '/';
+            }
+        }
+
+        function showToast(message, type = 'success') {
+            let container = document.getElementById('toast-container');
+            if (!container) {
+                container = document.createElement('div');
+                container.id = 'toast-container';
+                container.className = 'fixed top-5 right-5 z-50 flex flex-col gap-3 pointer-events-none';
+                document.body.appendChild(container);
+            }
+            const toast = document.createElement('div');
+            toast.className = `min-w-[300px] max-w-sm bg-panel border p-4 rounded-xl shadow-2xl flex items-center space-x-3 transition-all duration-300 transform translate-x-full opacity-0 pointer-events-auto`;
+            
+            let borderColor = 'border-borderMuted';
+            let iconClass = 'fa-solid fa-circle-info text-blue-400';
+            if (type === 'success') {
+                borderColor = 'border-green-500/30';
+                iconClass = 'fa-solid fa-circle-check text-green-500';
+            } else if (type === 'error') {
+                borderColor = 'border-brandRed/30';
+                iconClass = 'fa-solid fa-circle-exclamation text-brandRed';
+            } else if (type === 'warning') {
+                borderColor = 'border-yellow-500/30';
+                iconClass = 'fa-solid fa-triangle-exclamation text-yellow-500';
+            }
+
+            toast.className += ` ${borderColor}`;
+            toast.innerHTML = `
+                <div class="h-8 w-8 rounded-full flex items-center justify-center bg-sidebar border border-borderMuted shrink-0">
+                    <i class="${iconClass}"></i>
+                </div>
+                <div class="flex-grow">
+                    <p class="text-sm font-semibold text-white">${message}</p>
+                </div>
+                <button class="text-gray-500 hover:text-white transition shrink-0" onclick="this.parentElement.remove()">
+                    <i class="fa-solid fa-xmark text-xs"></i>
+                </button>
+            `;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.classList.remove('translate-x-full', 'opacity-0');
+            }, 10);
+            
+            setTimeout(() => {
+                toast.classList.add('translate-x-full', 'opacity-0');
+                setTimeout(() => {
+                    toast.remove();
+                }, 300);
+            }, 4000);
+        }
+    </script>
+
+    <!-- Real-time dashboard updates via WebSockets -->
+    <script src="/static/js/sockets.js"></script>
+
+    <!-- Interactive camera scanner actions -->
+    <script src="/static/js/webcam.js"></script>
+
+    <!-- Rendering charts on load -->
+    <script src="/static/js/charts.js"></script>
+    
+    {% block scripts %}{% endblock %}
+</body>
+</html>

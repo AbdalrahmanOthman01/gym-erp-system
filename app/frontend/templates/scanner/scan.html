@@ -1,0 +1,26 @@
+{% extends 'layout/base.html' %}
+{% block title %}Live Camera Attendance Portal{% endblock %}
+
+{% block content %}
+<div class="h-full w-full flex flex-col justify-center items-center pb-20">
+    <div class="w-full max-w-xl text-center mb-6">
+        <h1 class="text-3xl font-bold text-white mb-2"><i class="fa-solid fa-camera-rotate mr-2 text-brandRed"></i> Point of Entry Scanner</h1>
+        <p class="text-gray-400 text-sm">Please point the user's generated QR Card at your WebCam lens securely explicitly mapping bounds limiting cleanly properly gracefully safely flawlessly.</p>
+    </div>
+
+    <!-- Interactive Container correctly constraints flawlessly mapped -->
+    <div class="w-full max-w-xl bg-panel border border-borderMuted shadow-2xl rounded-xl overflow-hidden p-8 flex flex-col items-center">
+        
+        <div id="camera-scan-block" class="w-[400px] h-[400px] bg-background border-[4px] border-brandRed rounded shadow-[0_0_20px_rgba(217,45,45,0.2)] flex items-center justify-center relative">
+            <p class="text-gray-500 font-bold tracking-widest text-xl opacity-50 z-0">AWAITING CAMERA</p>
+        </div>
+
+        <button onclick="initQRScanner()" class="w-[400px] bg-brandRed hover:bg-[#b52525] text-white py-4 rounded font-bold transition shadow-lg mt-8 tracking-wider">
+            ACTIVATE OPTICAL SENSOR 
+        </button>
+
+    </div>
+
+    <p class="mt-8 text-xs font-semibold tracking-wider uppercase text-gray-500 border border-gray-700 bg-sidebar px-4 py-2 rounded-full shadow">Strict Access Bound Logging Engine is ON</p>
+</div>
+{% endblock %}

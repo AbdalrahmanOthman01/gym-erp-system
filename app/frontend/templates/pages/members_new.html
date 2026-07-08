@@ -1,0 +1,150 @@
+{% extends 'layout/base.html' %}
+{% block title %}Add New Member | ERP{% endblock %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto pb-10 mt-6" x-data="newMemberApp()">
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-white mb-2"><i class="fa-solid fa-user-plus mr-2 text-brandRed"></i> Register Gym Member</h1>
+        <p class="text-sm text-gray-400">Enroll a new athlete, configure their status, and generate their unique system identifiers.</p>
+    </div>
+
+    <!-- Interface Panel -->
+    <div class="bg-panel border border-borderMuted rounded-xl p-8 shadow-md">
+        <form @submit.prevent="submitForm()" class="space-y-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <!-- Full Name -->
+                <div>
+                    <label class="block text-sm text-gray-300 font-medium mb-2">Full Name</label>
+                    <input type="text" x-model="form.full_name" required placeholder="e.g. Ahmed Mohamed" 
+                           class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-3 text-sm focus:border-brandRed outline-none">
+                </div>
+                <!-- Phone -->
+                <div>
+                    <label class="block text-sm text-gray-300 font-medium mb-2">Phone Number</label>
+                    <input type="text" x-model="form.phone" required placeholder="e.g. 01012345678" 
+                           class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-3 text-sm focus:border-brandRed outline-none">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <!-- Gender -->
+                <div>
+                    <label class="block text-sm text-gray-300 font-medium mb-2">Gender</label>
+                    <select x-model="form.gender" required class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-3 text-sm focus:border-brandRed outline-none">
+                        <option value="male">Male</option>
+                        <option value="female">Female</option>
+                    </select>
+                </div>
+                <!-- Weight -->
+                <div>
+                    <label class="block text-sm text-gray-300 font-medium mb-2">Weight (kg)</label>
+                    <input type="number" step="0.1" x-model="form.weight" placeholder="e.g. 75.0" class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-3 text-sm focus:border-brandRed outline-none">
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 gap-6">
+                <!-- Notes -->
+                <div>
+                    <label class="block text-sm text-gray-300 font-medium mb-2">Notes / Medical History / Goals</label>
+                    <textarea x-model="form.notes" placeholder="Any special notes about the member..." rows="3" class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-3 text-sm focus:border-brandRed outline-none"></textarea>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <!-- Initial Plan -->
+                <div class="sm:col-span-2">
+                    <label class="block text-sm text-gray-300 font-medium mb-2">Select Initial Plan Tier</label>
+                    <select x-model="form.plan_id" class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-3 text-sm focus:border-brandRed outline-none">
+                        <option value="">None (Register as Inactive/Lead)</option>
+                        <template x-for="plan in plans" :key="plan.id">
+                            <option :value="plan.id" x-text="plan.name + ' (' + plan.price + ' EGP)'"></option>
+                        </template>
+                    </select>
+                </div>
+            </div>
+
+            <hr class="border-borderMuted my-6" />
+
+            <div class="flex justify-end space-x-4">
+                <button type="button" @click="window.location.href='/members'" class="px-5 py-3 rounded-md text-sm text-gray-400 bg-sidebar border border-borderMuted hover:bg-opacity-80 transition">Cancel</button>
+                <button type="submit" :disabled="submitting"
+                        class="px-8 py-3 rounded-md text-sm text-white font-bold bg-brandRed hover:bg-brandRed-hover transition shadow-lg shadow-brandRed/20 disabled:opacity-50">
+                    <span x-show="!submitting">Register Member & Save</span>
+                    <span x-show="submitting"><i class="fa-solid fa-circle-notch fa-spin mr-1.5"></i> Saving...</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function newMemberApp() {
+        return {
+            plans: [],
+            submitting: false,
+            form: {
+                full_name: '',
+                phone: '',
+                gender: 'male',
+                weight: null,
+                notes: '',
+                plan_id: ''
+            },
+
+            init() {
+                this.fetchPlans();
+            },
+
+            async fetchPlans() {
+                try {
+                    const res = await ApiAgent.call('/api/v1/members/plans/active');
+                    if (res) {
+                        this.plans = await res.json();
+                    }
+                } catch (err) {
+                      console.error("Failed to load active plans:", err);
+                }
+            },
+
+            async submitForm() {
+                this.submitting = true;
+                
+                // Format payload correctly
+                const payload = {
+                    full_name: this.form.full_name,
+                    phone: this.form.phone,
+                    gender: this.form.gender,
+                    weight: this.form.weight ? parseFloat(this.form.weight) : null,
+                    notes: this.form.notes || null,
+                    plan_id: this.form.plan_id || null
+                };
+
+                try {
+                    const res = await ApiAgent.call('/api/v1/members', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (res && res.status === 200) {
+                        showToast('Member registered successfully!', 'success');
+                        setTimeout(() => {
+                            window.location.href = '/members';
+                        }, 1000);
+                    } else if (res) {
+                        const err = await res.json();
+                        showToast(err.detail || 'Could not complete member registration.', 'error');
+                    }
+                } catch (err) {
+                    console.error("Member registration error:", err);
+                    showToast('Connection failed.', 'error');
+                } finally {
+                    this.submitting = false;
+                }
+            }
+        };
+    }
+</script>
+{% endblock %}

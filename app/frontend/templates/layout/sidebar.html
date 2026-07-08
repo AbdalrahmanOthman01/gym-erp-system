@@ -1,0 +1,121 @@
+<aside class="w-64 bg-sidebar border-r border-borderMuted flex flex-col justify-between hidden sm:flex shrink-0 z-50">
+    <div>
+        <!-- Logo Section -->
+        <div class="h-20 flex items-center justify-center border-b border-borderMuted p-4">
+            <img src="/static/images/logo.png" alt="Sport Time Gym" class="max-h-full" 
+                 onerror="this.outerHTML='<h1 class=\'text-xl font-bold italic text-white\'><span class=\'text-brandRed\'>SPORT TIME</span> GYM</h1>'" />
+        </div>
+
+        <!-- Menu Links -->
+        <nav class="mt-4 px-4 space-y-2" x-data="{ currentPath: window.location.pathname, hasMemberId: window.location.search.includes('member_id') }">
+            <a href="/dashboard" 
+               :class="(currentPath === '/dashboard' && !hasMemberId) ? 'bg-brandRed text-white shadow-lg shadow-brandRed/20' : 'text-gray-400 hover:text-white hover:bg-[#1c1e24]'"
+               class="flex items-center px-4 py-3 rounded-md transition-colors">
+                <i class="fa-solid fa-border-all w-6 text-center text-lg"></i>
+                <span class="ml-3 font-medium text-sm">Dashboard</span>
+            </a>
+
+            <!-- Dropdown Active Section (Matches your Screenshot exactly) -->
+            <div x-data="{ open: currentPath.startsWith('/members') || hasMemberId }" class="pt-1">
+                <button @click="open = !open" 
+                        :class="(currentPath.startsWith('/members') || hasMemberId) ? 'bg-brandRed text-white shadow-lg shadow-brandRed/20' : 'text-gray-400 hover:text-white hover:bg-[#1c1e24]'"
+                        class="w-full flex justify-between items-center px-4 py-3 rounded-md transition-colors">
+                    <div class="flex items-center">
+                        <i class="fa-solid fa-user-group w-6 text-center text-lg"></i>
+                        <span class="ml-3 font-semibold text-sm">User Management</span>
+                    </div>
+                    <i class="fa-solid fa-chevron-down text-xs transition-transform" :class="{'rotate-180': open}"></i>
+                </button>
+                <div x-show="open" class="bg-background border-l border-borderMuted ml-6 mt-1 flex flex-col" style="display: none;">
+                    <a href="/members" 
+                       :class="(currentPath === '/members') ? 'text-brandRed font-medium bg-[#1c1e24] border-l-2 border-brandRed' : 'text-gray-400 hover:text-white'"
+                       class="text-sm px-4 py-2.5 transition">All Users</a>
+                    <a href="/members/new" 
+                       :class="(currentPath === '/members/new') ? 'text-brandRed font-medium bg-[#1c1e24] border-l-2 border-brandRed' : 'text-gray-400 hover:text-white'"
+                       class="text-sm px-4 py-2.5 transition">Add New User</a>
+                    <a href="#" 
+                       :class="hasMemberId ? 'text-brandRed font-medium bg-[#1c1e24] border-l-2 border-brandRed' : 'text-gray-400 hover:text-white'"
+                       class="text-sm px-4 py-2.5 transition"
+                       x-show="hasMemberId" style="display: none;">User Analytics</a>
+                </div>
+            </div>
+
+            <a href="/attendance" 
+               :class="(currentPath === '/attendance' || currentPath === '/scan') ? 'bg-brandRed text-white shadow-lg shadow-brandRed/20' : 'text-gray-400 hover:text-white hover:bg-[#1c1e24]'"
+               class="flex items-center px-4 py-3 rounded-md transition-colors">
+                <i class="fa-regular fa-calendar-check w-6 text-center text-lg"></i>
+                <span class="ml-3 font-medium text-sm">Attendance</span>
+            </a>
+            
+            <a href="/plans" 
+               :class="(currentPath === '/plans') ? 'bg-brandRed text-white shadow-lg shadow-brandRed/20' : 'text-gray-400 hover:text-white hover:bg-[#1c1e24]'"
+               class="flex items-center px-4 py-3 rounded-md transition-colors">
+                <i class="fa-solid fa-lock w-6 text-center text-lg"></i>
+                <span class="ml-3 font-medium text-sm">Membership Plans</span>
+            </a>
+
+            <a href="/pos" 
+               :class="(currentPath === '/pos') ? 'bg-brandRed text-white shadow-lg shadow-brandRed/20' : 'text-gray-400 hover:text-white hover:bg-[#1c1e24]'"
+               class="flex items-center px-4 py-3 rounded-md transition-colors">
+                <i class="fa-solid fa-cart-shopping w-6 text-center text-lg"></i>
+                <span class="ml-3 font-medium text-sm">POS Cashier</span>
+            </a>
+
+            <a href="/payments" 
+               :class="(currentPath === '/payments') ? 'bg-brandRed text-white shadow-lg shadow-brandRed/20' : 'text-gray-400 hover:text-white hover:bg-[#1c1e24]'"
+               class="flex items-center px-4 py-3 rounded-md transition-colors">
+                <i class="fa-solid fa-wallet w-6 text-center text-lg"></i>
+                <span class="ml-3 font-medium text-sm">Payments</span>
+            </a>
+
+            {% if current_user.role.value == 'superadmin' %}
+            <a href="/inventory" 
+               :class="(currentPath === '/inventory') ? 'bg-brandRed text-white shadow-lg shadow-brandRed/20' : 'text-gray-400 hover:text-white hover:bg-[#1c1e24]'"
+               class="flex items-center px-4 py-3 rounded-md transition-colors">
+                <i class="fa-solid fa-boxes-stacked w-6 text-center text-lg"></i>
+                <span class="ml-3 font-medium text-sm">Inventory Catalog</span>
+            </a>
+            {% endif %}
+
+            <a href="/reports" 
+               :class="(currentPath === '/reports') ? 'bg-brandRed text-white shadow-lg shadow-brandRed/20' : 'text-gray-400 hover:text-white hover:bg-[#1c1e24]'"
+               class="flex items-center px-4 py-3 rounded-md transition-colors">
+                <i class="fa-solid fa-chart-simple w-6 text-center text-lg"></i>
+                <span class="ml-3 font-medium text-sm">Reports & Analytics</span>
+            </a>
+
+            {% if current_user.role.value == 'superadmin' %}
+            <a href="/staff" 
+               :class="(currentPath === '/staff') ? 'bg-brandRed text-white shadow-lg shadow-brandRed/20' : 'text-gray-400 hover:text-white hover:bg-[#1c1e24]'"
+               class="flex items-center px-4 py-3 rounded-md transition-colors">
+                <i class="fa-solid fa-user-shield w-6 text-center text-lg"></i>
+                <span class="ml-3 font-medium text-sm">Staff Management</span>
+            </a>
+            {% endif %}
+            
+            <a href="/notifications" 
+               :class="(currentPath === '/notifications') ? 'bg-brandRed text-white shadow-lg shadow-brandRed/20' : 'text-gray-400 hover:text-white hover:bg-[#1c1e24]'"
+               class="flex items-center px-4 py-3 rounded-md transition-colors">
+                <i class="fa-regular fa-bell w-6 text-center text-lg"></i>
+                <span class="ml-3 font-medium text-sm">Notifications</span>
+            </a>
+            
+            {% if current_user.role.value == 'superadmin' %}
+            <a href="/settings" 
+               :class="(currentPath === '/settings') ? 'bg-brandRed text-white shadow-lg shadow-brandRed/20' : 'text-gray-400 hover:text-white hover:bg-[#1c1e24]'"
+               class="flex items-center px-4 py-3 rounded-md transition-colors">
+                <i class="fa-solid fa-gear w-6 text-center text-lg"></i>
+                <span class="ml-3 font-medium text-sm">Settings</span>
+            </a>
+            {% endif %}
+        </nav>
+    </div>
+
+    <!-- Bottom Logout -->
+    <div class="p-4 mt-4 border-t border-borderMuted">
+        <button onclick="logoutSystem()" class="w-full flex items-center px-4 py-3 text-gray-400 hover:text-brandRed rounded-md transition-colors">
+            <i class="fa-solid fa-arrow-right-from-bracket w-6 text-lg"></i>
+            <span class="ml-3 font-medium text-sm">Logout</span>
+        </button>
+    </div>
+</aside>

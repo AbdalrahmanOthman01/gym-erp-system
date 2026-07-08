@@ -1,0 +1,272 @@
+{% extends 'layout/base.html' %}
+{% block title %}POS Cashier | Sport Time Gym{% endblock %}
+
+{% block content %}
+<div class="max-w-[1600px] mx-auto pb-10" x-data="posApp()">
+    <!-- Header -->
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between mb-6">
+        <div>
+            <h1 class="text-2xl font-semibold text-white">Point of Sale (POS) Cashier</h1>
+            <p class="text-sm text-gray-400 mt-1">Add items to the cart, select a member, and complete the merchandise sale transaction.</p>
+        </div>
+    </div>
+
+    <!-- Main Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Products Grid (Left & Center) -->
+        <div class="lg:col-span-2 space-y-6">
+            <!-- Search & Filters -->
+            <div class="bg-panel border border-borderMuted rounded-xl p-4 flex flex-col sm:flex-row gap-4 items-center justify-between">
+                <div class="relative w-full sm:w-80">
+                    <span class="absolute inset-y-0 left-0 flex items-center pl-3">
+                        <i class="fa-solid fa-magnifying-glass text-gray-500"></i>
+                    </span>
+                    <input type="text" x-model="searchQuery" @input="fetchProducts()" placeholder="Search products..." 
+                           class="w-full bg-[#1c1e24] text-white border border-borderMuted rounded-md py-2 pl-10 pr-4 text-sm focus:border-brandRed focus:ring-1 focus:ring-brandRed transition outline-none">
+                </div>
+                <div class="text-xs text-gray-400">
+                    Showing <span class="text-white font-semibold" x-text="products.length"></span> items
+                </div>
+            </div>
+
+            <!-- Products List -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4" x-show="products.length > 0">
+                <template x-for="product in products" :key="product.id">
+                    <div class="bg-panel border border-borderMuted rounded-xl p-5 hover:border-brandRed/40 transition flex flex-col justify-between">
+                        <div>
+                            <div class="flex justify-between items-start mb-2">
+                                <h3 class="font-semibold text-white text-base" x-text="product.name"></h3>
+                                <span :class="product.quantity > 5 ? 'bg-green-950 text-green-400 border-green-800' : 'bg-red-950 text-red-400 border-red-800'" 
+                                      class="px-2 py-0.5 rounded text-[10px] font-bold border" 
+                                      x-text="product.quantity > 0 ? product.quantity + ' In Stock' : 'Out of Stock'"></span>
+                            </div>
+                        </div>
+                        <div class="mt-4 pt-4 border-t border-borderMuted/40 flex justify-between items-center">
+                            <span class="text-white font-bold text-lg font-mono" x-text="product.sale_price + ' EGP'"></span>
+                            <button @click="addToCart(product)" :disabled="product.quantity <= 0"
+                                    class="bg-brandRed hover:bg-brandRed-hover text-white text-xs font-semibold px-3 py-1.5 rounded transition disabled:opacity-50 disabled:cursor-not-allowed">
+                                <i class="fa-solid fa-cart-plus mr-1"></i> Add to Cart
+                            </button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+
+            <!-- No Products State -->
+            <div class="bg-panel border border-borderMuted rounded-xl p-12 text-center" x-show="products.length === 0">
+                <i class="fa-solid fa-box-open text-gray-600 text-4xl mb-4"></i>
+                <p class="text-gray-400 text-sm">No products found in the catalog.</p>
+            </div>
+        </div>
+
+        <!-- Checkout Cart (Right Sidebar) -->
+        <div class="space-y-6">
+            <!-- Checkout Cart Card -->
+            <div class="bg-panel border border-borderMuted rounded-xl p-6 shadow-md flex flex-col justify-between min-h-[500px]">
+                <div>
+                    <h2 class="text-lg font-bold text-white mb-4 flex items-center justify-between border-b border-borderMuted pb-3">
+                        <span>Cart Details</span>
+                        <span class="bg-[#1c1e24] text-gray-400 text-xs px-2.5 py-1 rounded font-semibold" x-text="cartCount() + ' items'"></span>
+                    </h2>
+
+                    <!-- Cart Item Rows -->
+                    <div class="space-y-3 overflow-y-auto max-h-[300px] pr-2">
+                        <template x-for="item in cart" :key="item.product_id">
+                            <div class="flex items-center justify-between bg-[#1c1e24] p-3 rounded-lg border border-borderMuted/50">
+                                <div>
+                                    <h4 class="text-sm font-semibold text-white" x-text="item.name"></h4>
+                                    <p class="text-xs text-gray-500 font-mono mt-1" x-text="item.sale_price + ' EGP'"></p>
+                                </div>
+                                <div class="flex items-center space-x-3">
+                                    <div class="flex items-center bg-panel border border-borderMuted rounded overflow-hidden">
+                                        <button @click="updateQty(item, -1)" class="px-2 py-1 text-gray-400 hover:text-white hover:bg-borderMuted text-xs font-bold transition">-</button>
+                                        <span class="px-3 text-xs text-white font-bold" x-text="item.quantity"></span>
+                                        <button @click="updateQty(item, 1)" class="px-2 py-1 text-gray-400 hover:text-white hover:bg-borderMuted text-xs font-bold transition">+</button>
+                                    </div>
+                                    <button @click="removeFromCart(item)" class="text-gray-500 hover:text-brandRed transition">
+                                        <i class="fa-solid fa-trash-can text-sm"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </template>
+                        <div x-show="cart.length === 0" class="text-center py-10 text-gray-500 text-sm">
+                            <i class="fa-solid fa-shopping-basket text-2xl mb-2 text-gray-600 block"></i>
+                            Cart is empty
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Buyer & Payment Details -->
+                <div class="mt-6 pt-6 border-t border-borderMuted">
+                    <!-- Member Lookup -->
+                    <div class="mb-4">
+                        <label class="block text-xs text-gray-400 font-semibold mb-2 uppercase tracking-wide">Gym Member (Optional)</label>
+                        <select x-model="selectedMemberId" class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-2.5 text-sm focus:border-brandRed outline-none">
+                            <option value="">Walk-in Guest</option>
+                            <template x-for="member in members" :key="member.id">
+                                <option :value="member.id" x-text="member.full_name + ' (' + member.phone + ')'"></option>
+                            </template>
+                        </select>
+                    </div>
+
+                    <!-- Payment Method -->
+                    <div class="mb-6">
+                        <label class="block text-xs text-gray-400 font-semibold mb-2 uppercase tracking-wide">Payment Method</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button @click="paymentMethod = 'Cash'" 
+                                    :class="paymentMethod === 'Cash' ? 'bg-[#14321d] text-green-400 border-green-500' : 'bg-[#1c1e24] text-gray-400 border-borderMuted'"
+                                    class="py-2 rounded border font-semibold text-sm transition">
+                                <i class="fa-solid fa-money-bill-1-wave mr-1.5"></i> Cash
+                            </button>
+                            <button @click="paymentMethod = 'Card'" 
+                                    :class="paymentMethod === 'Card' ? 'bg-[#112a46] text-[#4d9eef] border-[#2563eb]' : 'bg-[#1c1e24] text-gray-400 border-borderMuted'"
+                                    class="py-2 rounded border font-semibold text-sm transition">
+                                <i class="fa-solid fa-credit-card mr-1.5"></i> Card
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Total Amount Display -->
+                    <div class="flex justify-between items-center mb-6 bg-[#1c1e24] p-4 rounded-xl border border-borderMuted">
+                        <span class="text-sm font-semibold text-gray-400">Total Price</span>
+                        <span class="text-xl font-bold text-white font-mono" x-text="cartTotal() + ' EGP'"></span>
+                    </div>
+
+                    <!-- Checkout Button -->
+                    <button @click="checkout()" :disabled="cart.length === 0 || checkingOut"
+                            class="w-full bg-brandRed hover:bg-brandRed-hover text-white py-3.5 rounded-lg text-sm font-bold transition shadow-lg shadow-brandRed/20 disabled:opacity-50 disabled:cursor-not-allowed">
+                        <span x-show="!checkingOut"><i class="fa-solid fa-check-double mr-1.5"></i> Process POS Checkout</span>
+                        <span x-show="checkingOut"><i class="fa-solid fa-circle-notch fa-spin mr-1.5"></i> Processing...</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function posApp() {
+        return {
+            products: [],
+            cart: [],
+            members: [],
+            searchQuery: '',
+            selectedMemberId: '',
+            paymentMethod: 'Cash',
+            checkingOut: false,
+
+            init() {
+                this.fetchProducts();
+                this.fetchMembers();
+            },
+
+            async fetchProducts() {
+                try {
+                    let url = '/api/v1/products';
+                    if (this.searchQuery) {
+                        url += `?search=${encodeURIComponent(this.searchQuery)}`;
+                    }
+                    const res = await ApiAgent.call(url);
+                    if (res) {
+                        this.products = await res.json();
+                    }
+                } catch (err) {
+                    console.error("Failed fetching products:", err);
+                }
+            },
+
+            async fetchMembers() {
+                try {
+                    const res = await ApiAgent.call('/api/v1/members');
+                    if (res) {
+                        this.members = await res.json();
+                    }
+                } catch (err) {
+                    console.error("Failed fetching members:", err);
+                }
+            },
+
+            addToCart(product) {
+                const existing = this.cart.find(x => x.product_id === product.id);
+                if (existing) {
+                    if (existing.quantity < product.quantity) {
+                        existing.quantity++;
+                    } else {
+                        showToast(`Only ${product.quantity} units of ${product.name} are available in stock.`, 'warning');
+                    }
+                } else {
+                    this.cart.push({
+                        product_id: product.id,
+                        name: product.name,
+                        sale_price: product.sale_price,
+                        max_quantity: product.quantity,
+                        quantity: 1
+                    });
+                }
+            },
+
+            removeFromCart(item) {
+                this.cart = this.cart.filter(x => x.product_id !== item.product_id);
+            },
+
+            updateQty(item, delta) {
+                item.quantity += delta;
+                if (item.quantity <= 0) {
+                    this.removeFromCart(item);
+                } else if (item.quantity > item.max_quantity) {
+                    item.quantity = item.max_quantity;
+                    showToast(`Cannot exceed total stock of ${item.max_quantity} units.`, 'warning');
+                }
+            },
+
+            cartCount() {
+                return this.cart.reduce((sum, x) => sum + x.quantity, 0);
+            },
+
+            cartTotal() {
+                return this.cart.reduce((sum, x) => sum + (x.quantity * x.sale_price), 0).toFixed(2);
+            },
+
+            async checkout() {
+                if (this.cart.length === 0) return;
+                this.checkingOut = true;
+
+                const payload = {
+                    buyer_id: this.selectedMemberId || null,
+                    items: this.cart.map(x => ({
+                        product_id: x.product_id,
+                        quantity: x.quantity
+                    })),
+                    payment_method: this.paymentMethod
+                };
+
+                try {
+                    const res = await ApiAgent.call('/api/v1/pos/sale', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (res && res.status === 200) {
+                        showToast('POS checkout completed successfully!', 'success');
+                        this.cart = [];
+                        this.selectedMemberId = '';
+                        this.paymentMethod = 'Cash';
+                        this.fetchProducts();
+                    } else if (res) {
+                        const err = await res.json();
+                        showToast(err.detail || 'Failed processing checkout.', 'error');
+                    }
+                } catch (err) {
+                    console.error("Checkout transaction error:", err);
+                    showToast('Transaction dropped or connection failure.', 'error');
+                } finally {
+                    this.checkingOut = false;
+                }
+            }
+        };
+    }
+</script>
+{% endblock %}

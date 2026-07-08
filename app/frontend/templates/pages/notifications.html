@@ -1,0 +1,109 @@
+{% extends 'layout/base.html' %}
+
+{% block title %}Notifications & Alerts | Sport Time Gym{% endblock %}
+
+{% block content %}
+<div class="max-w-[1200px] mx-auto pb-10" x-data="notificationsApp()">
+
+    <!-- Header Actions -->
+    <div class="flex items-center justify-between mb-8">
+        <div>
+            <h1 class="text-2xl font-bold text-white mb-1"><i class="fa-regular fa-bell mr-2 text-brandRed"></i> Notifications & Alerts</h1>
+            <p class="text-sm text-gray-400">Review critical operational alerts, membership expirations, and inventory warnings.</p>
+        </div>
+        <button @click="loadNotifications()" class="text-gray-400 hover:text-white px-4 py-2 bg-sidebar border border-borderMuted rounded-md text-sm font-medium transition flex items-center">
+            <i class="fa-solid fa-rotate mr-2" :class="loading ? 'fa-spin' : ''"></i> Refresh Alerts
+        </button>
+    </div>
+
+    <!-- Loading State -->
+    <div x-show="loading" class="bg-panel border border-borderMuted rounded-xl p-12 text-center text-gray-400">
+        <i class="fa-solid fa-circle-notch fa-spin text-3xl text-brandRed mb-3"></i>
+        <p>Scanning active system logs for warnings...</p>
+    </div>
+
+    <!-- Active Alerts List -->
+    <div class="space-y-4" x-show="!loading">
+        
+        <template x-for="alert in alerts" :key="alert.id">
+            <div :class="{
+                'bg-red-950/30 border-red-500/20 text-red-200': alert.severity === 'error',
+                'bg-yellow-950/30 border-yellow-500/20 text-yellow-200': alert.severity === 'warning',
+                'bg-blue-950/30 border-blue-500/20 text-blue-200': alert.severity === 'info'
+            }" class="border rounded-xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between shadow-sm gap-4 transition duration-150">
+                
+                <!-- Info Section -->
+                <div class="flex items-start space-x-4">
+                    <div class="h-10 w-10 rounded-full flex items-center justify-center shrink-0"
+                         :class="{
+                             'bg-red-950 border border-red-800 text-brandRed': alert.severity === 'error',
+                             'bg-yellow-950 border border-yellow-800 text-yellow-500': alert.severity === 'warning',
+                             'bg-blue-950 border border-blue-800 text-blue-400': alert.severity === 'info'
+                         }">
+                        <i class="fa-solid" :class="{
+                            'fa-triangle-exclamation': alert.severity === 'error',
+                            'fa-bell-slash': alert.severity === 'warning' && alert.type === 'low_stock',
+                            'fa-snowflake': alert.severity === 'warning' && alert.type === 'expiring_soon',
+                            'fa-ban': alert.severity === 'info'
+                        }"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-[15px] text-white" x-text="alert.title"></h3>
+                        <p class="text-xs text-gray-300 mt-1" x-text="alert.message"></p>
+                        <span class="inline-block mt-2 text-[10px] uppercase font-bold tracking-wider text-gray-500" x-text="alert.created_at"></span>
+                    </div>
+                </div>
+
+                <!-- Action Button -->
+                <div class="shrink-0">
+                    <a :href="alert.action_url" class="inline-flex items-center px-4 py-2 bg-sidebar border border-borderMuted hover:border-gray-500 text-white rounded-md text-xs font-semibold transition">
+                        <span x-text="alert.action_label"></span> <i class="fa-solid fa-chevron-right ml-2 text-[10px]"></i>
+                    </a>
+                </div>
+
+            </div>
+        </template>
+
+        <!-- Empty State -->
+        <div x-show="alerts.length === 0" class="bg-panel border border-borderMuted rounded-xl p-16 text-center text-gray-500">
+            <div class="h-16 w-16 bg-sidebar rounded-full border border-borderMuted flex items-center justify-center mx-auto mb-4 text-green-500">
+                <i class="fa-solid fa-circle-check text-2xl"></i>
+            </div>
+            <h3 class="text-white font-bold text-lg">System Status Nominal</h3>
+            <p class="text-sm text-gray-400 mt-1">There are no active alerts, expired plans, or low stock warnings in the ERP logs.</p>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function notificationsApp() {
+        return {
+            alerts: [],
+            loading: false,
+
+            init() {
+                this.loadNotifications();
+            },
+
+            async loadNotifications() {
+                this.loading = true;
+                try {
+                    const res = await ApiAgent.call('/api/v1/notifications');
+                    if (res) {
+                        this.alerts = await res.json();
+                    }
+                } catch (err) {
+                    console.error("Failed loading notifications:", err);
+                    showToast('Failed to retrieve active notification log.', 'error');
+                } finally {
+                    this.loading = false;
+                }
+            }
+        };
+    }
+</script>
+{% endblock %}

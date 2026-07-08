@@ -1,0 +1,92 @@
+{% extends 'layout/base.html' %}
+{% block title %}System Settings{% endblock %}
+
+{% block content %}
+<div class="max-w-[1200px] mx-auto pb-10">
+
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-white mb-1"><i class="fa-solid fa-gear mr-2 text-gray-500"></i> Platform Settings</h1>
+        <p class="text-sm text-gray-400">Configure global ERP environment variables and notifications.</p>
+    </div>
+
+    <div class="flex flex-col md:flex-row gap-6">
+        
+        <!-- Left Nav pane -->
+        <div class="md:w-64 flex-shrink-0 space-y-1">
+            <button class="w-full flex items-center px-4 py-3 bg-brandRed text-white rounded-md font-semibold text-sm shadow-md transition">
+                <i class="fa-solid fa-building w-5 mr-2 text-center"></i> Gym Profile
+            </button>
+            <button class="w-full flex items-center px-4 py-3 text-gray-400 hover:text-white hover:bg-panel rounded-md text-sm transition">
+                <i class="fa-solid fa-bell w-5 mr-2 text-center"></i> Alerts & WhatsApp
+            </button>
+            <button class="w-full flex items-center px-4 py-3 text-gray-400 hover:text-white hover:bg-panel rounded-md text-sm transition">
+                <i class="fa-solid fa-print w-5 mr-2 text-center"></i> Printer Configurations
+            </button>
+            <button class="w-full flex items-center px-4 py-3 text-gray-400 hover:text-white hover:bg-panel rounded-md text-sm transition">
+                <i class="fa-solid fa-database w-5 mr-2 text-center"></i> Backups & Data
+            </button>
+        </div>
+
+        <!-- Right Content panel -->
+        <div class="flex-1 bg-panel border border-borderMuted rounded-xl p-8 shadow-sm">
+            
+            <h2 class="text-lg font-bold text-white border-b border-borderMuted pb-3 mb-6">Facility Information</h2>
+            
+            <form class="space-y-6">
+                <div class="grid grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm text-gray-300 font-medium mb-2">Registered Gym Name</label>
+                        <input type="text" value="Sport Time Gym" class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-3 text-sm focus:border-brandRed focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-300 font-medium mb-2">Branch Setup</label>
+                        <select class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-3 text-sm focus:border-brandRed focus:outline-none disabled:opacity-50">
+                            <option>Main HQ (Single Branch Operation)</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm text-gray-300 font-medium mb-2">Official Address (For Invoices/Print)</label>
+                    <input type="text" value="مـسجـد الخالدي - شبين الكـوم" class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-3 text-sm text-right focus:border-brandRed focus:outline-none">
+                </div>
+                
+                <div class="grid grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm text-gray-300 font-medium mb-2">Main Contact Line</label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-gray-500">+20</span>
+                            <input type="text" value="1093957410" class="w-full bg-[#1c1e24] text-white border border-borderMuted rounded py-3 pl-10 pr-4 text-sm focus:border-brandRed focus:outline-none">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="block text-sm text-gray-300 font-medium mb-2">Default Currency</label>
+                        <select class="w-full bg-[#1c1e24] border border-borderMuted text-white rounded p-3 text-sm focus:border-brandRed focus:outline-none">
+                            <option>EGP - Egyptian Pound</option>
+                            <option>USD - US Dollar</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-between mt-8 border-t border-borderMuted pt-6">
+                    <div>
+                        <p class="text-sm font-semibold text-white">System Dark Mode Lock</p>
+                        <p class="text-xs text-gray-500">Force application styling across all employee sessions.</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" value="" class="sr-only peer" checked>
+                        <div class="w-11 h-6 bg-gray-600 rounded-full peer peer-focus:ring-2 peer-focus:ring-brandRed peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brandRed"></div>
+                    </label>
+                </div>
+
+                <div class="pt-6">
+                    <button type="button" class="bg-brandRed text-white font-bold py-3 px-8 rounded shadow hover:bg-brandRed-hover transition">
+                        Save System Settings
+                    </button>
+                </div>
+            </form>
+            
+        </div>
+    </div>
+</div>
+{% endblock %}

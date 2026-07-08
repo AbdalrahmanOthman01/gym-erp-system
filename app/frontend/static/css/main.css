@@ -1,0 +1,33 @@
+/* Custom Global Utility Injectors & Engine Resets */
+
+/* Ensure smooth initial DOM loading - prevents dark-theme flicker */
+body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    animation: fade_in 0.4s ease-out;
+}
+
+@keyframes fade_in {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+/* 
+ * Enterprise scrollbar matching native Mac/Linux sleek UI 
+ * rather than blocky windows standard scrollers
+ */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+}
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+::-webkit-scrollbar-thumb {
+    background: var(--border-muted, #2d313c);
+    border-radius: 8px;
+    border: 2px solid #0f1115; /* Matching site background creates a sleek padded look */
+}
+::-webkit-scrollbar-thumb:hover {
+    background: var(--brand-red, #D92D2D);
+}

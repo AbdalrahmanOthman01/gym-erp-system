@@ -1,0 +1,26 @@
+/* Safeguards the UI grids inside data matrices (Members Page) */
+
+/* Ensures the header stays locked on scrolling */
+thead th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    backdrop-filter: blur(10px);
+}
+
+/* Text limits for UI safety: truncates super-long text inputs natively */
+td {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 300px; /* strict overflow protection limit */
+}
+
+/* Ensure checkbox rows don't shift alignments on hover/click focus */
+table input[type="checkbox"] {
+    width: 1rem;
+    height: 1rem;
+    margin: 0;
+    display: inline-block;
+    vertical-align: middle;
+}

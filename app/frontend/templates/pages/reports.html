@@ -1,0 +1,481 @@
+{% extends 'layout/base.html' %}
+
+{% block title %}Reports & Analytics | Sport Time Gym{% endblock %}
+
+{% block content %}
+<div class="max-w-[1600px] mx-auto pb-10" x-data="reportsApp()">
+
+    <!-- Header Actions -->
+    <div class="flex items-center justify-between mb-8">
+        <div>
+            <h1 class="text-2xl font-semibold text-white mb-1"><i class="fa-solid fa-chart-simple mr-2 text-brandRed"></i> Reports & Analytics</h1>
+            <p class="text-sm text-gray-400">Deep-dive gym performance analytics, revenue tracking, and check-in trends.</p>
+        </div>
+    </div>
+
+    <!-- Daily Financials Cards -->
+    <div class="mb-4" x-show="summary">
+        <h3 class="text-xs font-bold text-gray-400 mb-3 uppercase tracking-wider"><i class="fa-solid fa-calendar-day mr-1.5 text-brandRed"></i> Daily Financial Performance (Today)</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div class="bg-panel border border-borderMuted rounded-xl p-5 flex justify-between items-center shadow-sm">
+                <div>
+                    <p class="text-[11px] text-gray-500 font-bold uppercase tracking-wider mb-1">Income Today</p>
+                    <p class="text-2xl font-extrabold text-green-400" x-text="summary.daily_financials.income.toFixed(2) + ' EGP'"></p>
+                </div>
+                <div class="h-10 w-10 rounded-lg bg-green-950/40 border border-green-800/30 flex items-center justify-center text-green-400">
+                    <i class="fa-solid fa-arrow-down-long"></i>
+                </div>
+            </div>
+            <div class="bg-panel border border-borderMuted rounded-xl p-5 flex justify-between items-center shadow-sm">
+                <div>
+                    <p class="text-[11px] text-gray-500 font-bold uppercase tracking-wider mb-1">Expenses Today</p>
+                    <p class="text-2xl font-extrabold text-red-400" x-text="summary.daily_financials.expenses.toFixed(2) + ' EGP'"></p>
+                </div>
+                <div class="h-10 w-10 rounded-lg bg-red-950/40 border border-red-800/30 flex items-center justify-center text-red-450">
+                    <i class="fa-solid fa-arrow-up-long"></i>
+                </div>
+            </div>
+            <div class="bg-panel border border-borderMuted rounded-xl p-5 flex justify-between items-center shadow-sm">
+                <div>
+                    <p class="text-[11px] text-gray-500 font-bold uppercase tracking-wider mb-1">Net Balance Today</p>
+                    <p class="text-2xl font-extrabold" :class="summary.daily_financials.net >= 0 ? 'text-green-400' : 'text-red-400'" 
+                       x-text="(summary.daily_financials.net >= 0 ? '+' : '') + summary.daily_financials.net.toFixed(2) + ' EGP'"></p>
+                </div>
+                <div class="h-10 w-10 rounded-lg bg-sidebar border border-borderMuted/80 flex items-center justify-center text-white">
+                    <i class="fa-solid fa-scale-balanced"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Monthly Financials Cards -->
+    <div class="mb-8" x-show="summary">
+        <h3 class="text-xs font-bold text-gray-400 mb-3 uppercase tracking-wider"><i class="fa-solid fa-calendar-days mr-1.5 text-brandRed"></i> Monthly Financial Performance (Current Month)</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+            <div class="bg-panel border border-borderMuted rounded-xl p-5 flex justify-between items-center shadow-sm">
+                <div>
+                    <p class="text-[11px] text-gray-500 font-bold uppercase tracking-wider mb-1">Income This Month</p>
+                    <p class="text-2xl font-extrabold text-green-400" x-text="summary.monthly_financials.income.toFixed(2) + ' EGP'"></p>
+                </div>
+                <div class="h-10 w-10 rounded-lg bg-green-950/40 border border-green-800/30 flex items-center justify-center text-green-400">
+                    <i class="fa-solid fa-money-bill-trend-up"></i>
+                </div>
+            </div>
+            <div class="bg-panel border border-borderMuted rounded-xl p-5 flex justify-between items-center shadow-sm">
+                <div>
+                    <p class="text-[11px] text-gray-500 font-bold uppercase tracking-wider mb-1">Expenses This Month</p>
+                    <p class="text-2xl font-extrabold text-red-400" x-text="summary.monthly_financials.expenses.toFixed(2) + ' EGP'"></p>
+                </div>
+                <div class="h-10 w-10 rounded-lg bg-red-950/40 border border-red-800/30 flex items-center justify-center text-red-450">
+                    <i class="fa-solid fa-receipt"></i>
+                </div>
+            </div>
+            <div class="bg-panel border border-borderMuted rounded-xl p-5 flex justify-between items-center shadow-sm">
+                <div>
+                    <p class="text-[11px] text-gray-500 font-bold uppercase tracking-wider mb-1">Net Balance This Month</p>
+                    <p class="text-2xl font-extrabold" :class="summary.monthly_financials.net >= 0 ? 'text-green-400' : 'text-red-400'" 
+                       x-text="(summary.monthly_financials.net >= 0 ? '+' : '') + summary.monthly_financials.net.toFixed(2) + ' EGP'"></p>
+                </div>
+                <div class="h-10 w-10 rounded-lg bg-sidebar border border-borderMuted/80 flex items-center justify-center text-white">
+                    <i class="fa-solid fa-coins"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts Layout Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        
+        <!-- Revenue Trend Chart -->
+        <div class="bg-panel border border-borderMuted rounded-xl p-6 shadow-sm">
+            <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-4 gap-2">
+                <h3 class="text-white font-semibold text-sm uppercase tracking-wider text-gray-400">
+                    <i class="fa-solid fa-chart-line mr-2 text-brandRed"></i> Revenue Stream Trend
+                </h3>
+                <div>
+                    <select x-model="selectedRevenueFilter" @change="updateRevenueView()" 
+                            class="bg-[#1c1e24] text-xs border border-borderMuted rounded text-white px-3 py-2 focus:border-brandRed outline-none cursor-pointer">
+                        <option value="total">Total Revenue (Subs + POS Sales)</option>
+                        <option value="membership">Subscriptions Only</option>
+                        <option value="sales">POS Sales Only</option>
+                    </select>
+                </div>
+            </div>
+            <div class="h-[300px] relative">
+                <canvas id="revenueTrendChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Payment Method share Chart -->
+        <div class="bg-panel border border-borderMuted rounded-xl p-6 shadow-sm">
+            <h3 class="text-white font-semibold text-sm mb-4 uppercase tracking-wider text-gray-400"><i class="fa-solid fa-pie-chart mr-2 text-blue-400"></i> Revenue Split by Payment Method</h3>
+            <div class="h-[300px] relative flex justify-center">
+                <canvas id="paymentMethodChart" class="max-w-[300px]"></canvas>
+            </div>
+        </div>
+        
+        <!-- Attendance Trend Chart -->
+        <div class="bg-panel border border-borderMuted rounded-xl p-6 shadow-sm lg:col-span-2">
+            <h3 class="text-white font-semibold text-sm mb-4 uppercase tracking-wider text-gray-400"><i class="fa-regular fa-calendar mr-2 text-[#4d9eef]"></i> Daily Check-in Frequency (Last 30 Days)</h3>
+            <div class="h-[250px] relative">
+                <canvas id="attendanceTrendChart"></canvas>
+            </div>
+        </div>
+        
+    </div>
+
+    <!-- Top Products Table -->
+    <div class="bg-panel border border-borderMuted rounded-xl shadow-sm flex flex-col">
+        <div class="px-6 py-4 border-b border-borderMuted">
+            <h3 class="text-white font-semibold text-sm uppercase tracking-wider text-gray-400"><i class="fa-solid fa-box mr-2 text-amber-500"></i> Top-Selling Products Catalog</h3>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm whitespace-nowrap">
+                <thead class="bg-[#1c1e24] border-b border-borderMuted text-gray-400 font-semibold text-[12px] uppercase tracking-wider">
+                    <tr>
+                        <th class="px-6 py-4">Rank</th>
+                        <th class="px-6 py-4">Product Name</th>
+                        <th class="px-6 py-4 text-center">Units Sold</th>
+                        <th class="px-6 py-4 text-right">Revenue Generated</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-borderMuted text-gray-300">
+                    <template x-for="(prod, index) in topProducts" :key="prod.name">
+                        <tr class="hover:bg-[#1f232d] transition duration-150">
+                            <td class="px-6 py-4 text-xs font-mono font-bold text-gray-500" x-text="'#0' + (index + 1)"></td>
+                            <td class="px-6 py-4 font-semibold text-white" x-text="prod.name"></td>
+                            <td class="px-6 py-4 text-center font-mono font-bold text-[#4d9eef]" x-text="prod.units_sold"></td>
+                            <td class="px-6 py-4 text-right font-mono font-semibold text-green-400" x-text="prod.revenue.toFixed(2) + ' EGP'"></td>
+                        </tr>
+                    </template>
+                    <tr x-show="topProducts.length === 0">
+                        <td colspan="4" class="px-6 py-8 text-center text-gray-500">
+                            No product sales recorded.
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Daily Archives Search Panel -->
+    <div class="bg-panel border border-borderMuted rounded-xl shadow-sm mt-8 p-6 space-y-6">
+        <div class="border-b border-borderMuted pb-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+            <div>
+                <h3 class="text-base font-bold text-white"><i class="fa-solid fa-clock-rotate-left text-brandRed mr-2"></i> Daily Archives History Search</h3>
+                <p class="text-xs text-gray-400 mt-1">Audit daily financials and list registered members for any previous date.</p>
+            </div>
+            
+            <div class="flex items-center space-x-3">
+                <input type="date" x-model="historySearchDate" class="bg-[#1c1e24] border border-borderMuted text-white text-sm rounded px-3 py-2 outline-none focus:border-brandRed">
+                <button @click="searchDailyHistory()" class="bg-brandRed hover:bg-brandRed-hover text-white text-xs font-semibold px-4 py-2.5 rounded transition flex items-center shadow-lg">
+                    <i class="fa-solid fa-magnifying-glass mr-1.5"></i> Search Date
+                </button>
+            </div>
+        </div>
+        
+        <!-- Search Results (Only show when searched) -->
+        <div x-show="historyResult" class="space-y-6" style="display: none;">
+            <!-- Summary stats -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div class="bg-[#1c1e24] border border-borderMuted/60 p-4 rounded-lg">
+                    <p class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Total Income</p>
+                    <p class="text-lg font-bold text-green-400 mt-1" x-text="historyResult ? historyResult.total_income.toFixed(2) + ' EGP' : '0.00 EGP'"></p>
+                </div>
+                <div class="bg-[#1c1e24] border border-borderMuted/60 p-4 rounded-lg">
+                    <p class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Subscriptions Income</p>
+                    <p class="text-base font-semibold text-white mt-1" x-text="historyResult ? historyResult.membership_income.toFixed(2) + ' EGP' : '0.00 EGP'"></p>
+                </div>
+                <div class="bg-[#1c1e24] border border-borderMuted/60 p-4 rounded-lg">
+                    <p class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">POS Sales Income</p>
+                    <p class="text-base font-semibold text-white mt-1" x-text="historyResult ? historyResult.sales_income.toFixed(2) + ' EGP' : '0.00 EGP'"></p>
+                </div>
+                <div class="bg-[#1c1e24] border border-borderMuted/60 p-4 rounded-lg">
+                    <p class="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Net Balance</p>
+                    <p class="text-lg font-bold mt-1" :class="historyResult && historyResult.net_balance >= 0 ? 'text-green-400' : 'text-red-400'" 
+                       x-text="historyResult ? (historyResult.net_balance >= 0 ? '+' : '') + historyResult.net_balance.toFixed(2) + ' EGP' : '0.00 EGP'"></p>
+                </div>
+            </div>
+            
+            <!-- Subscribed Members List -->
+            <div>
+                <h4 class="text-xs font-bold text-white mb-3 uppercase tracking-wider"><i class="fa-solid fa-user-check mr-1 text-green-400"></i> Members Subscribed on <span x-text="historyResult ? historyResult.date : ''"></span></h4>
+                <div class="overflow-x-auto border border-borderMuted rounded-lg">
+                    <table class="w-full text-left text-sm whitespace-nowrap">
+                        <thead class="bg-[#1c1e24] border-b border-borderMuted text-gray-400 font-semibold text-[11px] uppercase tracking-wider">
+                            <tr>
+                                <th class="px-5 py-3">Member Name</th>
+                                <th class="px-5 py-3">Contact</th>
+                                <th class="px-5 py-3">Gender</th>
+                                <th class="px-5 py-3">Membership Plan</th>
+                                <th class="px-5 py-3 font-mono text-right">Amount Paid</th>
+                                <th class="px-5 py-3 font-mono text-right">Balance</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-borderMuted text-gray-300 bg-[#16181e]/40">
+                            <template x-for="member in (historyResult ? historyResult.subscribed_members : [])" :key="member.id">
+                                <tr class="hover:bg-[#1f232d]/50 transition">
+                                    <td class="px-5 py-3 font-semibold text-white" x-text="member.full_name"></td>
+                                    <td class="px-5 py-3 font-mono text-xs text-gray-400" x-text="member.phone"></td>
+                                    <td class="px-5 py-3 capitalize text-xs text-gray-400" x-text="member.gender"></td>
+                                    <td class="px-5 py-3 text-xs text-white" x-text="member.plan_name"></td>
+                                    <td class="px-5 py-3 font-mono text-right text-xs text-green-400" x-text="member.paid_amount.toFixed(2) + ' EGP'"></td>
+                                    <td class="px-5 py-3 font-mono text-right text-xs" :class="member.balance > 0 ? 'text-red-400 font-bold' : 'text-gray-500'" x-text="member.balance.toFixed(2) + ' EGP'"></td>
+                                </tr>
+                            </template>
+                            <tr x-show="historyResult && historyResult.subscribed_members.length === 0">
+                                <td colspan="6" class="px-5 py-8 text-center text-gray-500 text-xs">
+                                    No members registered or renewed on this date.
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    function reportsApp() {
+        return {
+            totalRevenue: '0.00',
+            totalCheckins: 0,
+            bestSellerName: 'N/A',
+            topProducts: [],
+            selectedRevenueFilter: 'total',
+            totalRevenueTotal: 0,
+            totalRevenueMembership: 0,
+            totalRevenueSales: 0,
+            reportsData: null,
+            revenueTrendChartInstance: null,
+            
+            historySearchDate: new Date().toISOString().split('T')[0],
+            historyResult: null,
+            summary: null,
+
+            init() {
+                this.loadReports();
+            },
+
+            async loadReports() {
+                try {
+                    const res = await ApiAgent.call('/api/v1/reports/summary');
+                    if (res) {
+                        const data = await res.json();
+                        this.reportsData = data;
+                        this.summary = data;
+                        this.topProducts = data.top_products;
+                        
+                        this.totalRevenueTotal = data.revenue_trend_total.reduce((a, b) => a + b, 0);
+                        this.totalRevenueMembership = data.revenue_trend_membership.reduce((a, b) => a + b, 0);
+                        this.totalRevenueSales = data.revenue_trend_sales.reduce((a, b) => a + b, 0);
+                        
+                        this.updateRevenueView();
+                        
+                        const totalCh = data.attendance_trend.values.reduce((a, b) => a + b, 0);
+                        this.totalCheckins = totalCh;
+                        
+                        if (data.top_products && data.top_products.length > 0) {
+                            this.bestSellerName = data.top_products[0].name;
+                        }
+
+                        this.renderCharts(data);
+                    }
+                } catch (err) {
+                    console.error("Failed to load reports summary:", err);
+                    showToast('Failed to compile reports data.', 'error');
+                }
+            },
+
+            async searchDailyHistory() {
+                if (!this.historySearchDate) return;
+                try {
+                    const res = await ApiAgent.call(`/api/v1/reports/history?date=${this.historySearchDate}`);
+                    if (res) {
+                        this.historyResult = await res.json();
+                    }
+                } catch (err) {
+                    console.error("Daily history lookup failed:", err);
+                    showToast('Failed to retrieve daily history data.', 'error');
+                }
+            },
+
+            updateRevenueView() {
+                if (!this.reportsData) return;
+                
+                let selectedVal = 0;
+                let datasetValues = [];
+                let labelText = 'Total Revenue (EGP)';
+                
+                if (this.selectedRevenueFilter === 'total') {
+                    selectedVal = this.totalRevenueTotal;
+                    datasetValues = this.reportsData.revenue_trend_total;
+                    labelText = 'Total Revenue (EGP)';
+                } else if (this.selectedRevenueFilter === 'membership') {
+                    selectedVal = this.totalRevenueMembership;
+                    datasetValues = this.reportsData.revenue_trend_membership;
+                    labelText = 'Subscription Revenue (EGP)';
+                } else if (this.selectedRevenueFilter === 'sales') {
+                    selectedVal = this.totalRevenueSales;
+                    datasetValues = this.reportsData.revenue_trend_sales;
+                    labelText = 'POS Sales Revenue (EGP)';
+                }
+                
+                this.totalRevenue = selectedVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                
+                if (this.revenueTrendChartInstance) {
+                    this.revenueTrendChartInstance.data.datasets[0].data = datasetValues;
+                    this.revenueTrendChartInstance.data.datasets[0].label = labelText;
+                    this.revenueTrendChartInstance.update();
+                }
+            },
+
+            renderCharts(data) {
+                // 1. REVENUE TREND CHART (Bar Chart)
+                const revCtx = document.getElementById('revenueTrendChart').getContext('2d');
+                
+                let datasetValues = data.revenue_trend_total;
+                let labelText = 'Total Revenue (EGP)';
+                if (this.selectedRevenueFilter === 'membership') {
+                    datasetValues = data.revenue_trend_membership;
+                    labelText = 'Subscription Revenue (EGP)';
+                } else if (this.selectedRevenueFilter === 'sales') {
+                    datasetValues = data.revenue_trend_sales;
+                    labelText = 'POS Sales Revenue (EGP)';
+                }
+
+                if (this.revenueTrendChartInstance) {
+                    this.revenueTrendChartInstance.destroy();
+                }
+
+                this.revenueTrendChartInstance = new Chart(revCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: data.months,
+                        datasets: [{
+                            label: labelText,
+                            data: datasetValues,
+                            backgroundColor: '#D92D2D',
+                            hoverBackgroundColor: '#B52525',
+                            borderRadius: 6,
+                            borderWidth: 0
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: '#15181e',
+                                titleColor: '#fff',
+                                bodyColor: '#E5E7EB',
+                                borderColor: '#242831',
+                                borderWidth: 1,
+                                padding: 10
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: { display: false },
+                                ticks: { color: '#9CA3AF', font: { family: 'Inter', size: 11 } }
+                            },
+                            y: {
+                                grid: { color: '#242831' },
+                                ticks: { color: '#9CA3AF', font: { family: 'Inter', size: 11 } }
+                            }
+                        }
+                    }
+                });
+
+                // 2. PAYMENT METHODS CHART (Doughnut Chart)
+                const payCtx = document.getElementById('paymentMethodChart').getContext('2d');
+                new Chart(payCtx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: data.payment_methods.labels,
+                        datasets: [{
+                            data: data.payment_methods.values,
+                            backgroundColor: ['#D92D2D', '#2563eb', '#10b981', '#f59e0b', '#8b5cf6'],
+                            borderWidth: 2,
+                            borderColor: '#15181e'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'bottom',
+                                labels: {
+                                    color: '#E5E7EB',
+                                    font: { family: 'Inter', size: 12 },
+                                    padding: 15
+                                }
+                            },
+                            tooltip: {
+                                backgroundColor: '#15181e',
+                                titleColor: '#fff',
+                                bodyColor: '#E5E7EB',
+                                borderColor: '#242831',
+                                borderWidth: 1,
+                                padding: 10
+                            }
+                        }
+                    }
+                });
+
+                // 3. ATTENDANCE TREND CHART (Line Chart)
+                const attCtx = document.getElementById('attendanceTrendChart').getContext('2d');
+                new Chart(attCtx, {
+                    type: 'line',
+                    data: {
+                        labels: data.attendance_trend.labels,
+                        datasets: [{
+                            label: 'Daily Check-ins',
+                            data: data.attendance_trend.values,
+                            borderColor: '#2563eb',
+                            backgroundColor: 'rgba(37, 99, 235, 0.1)',
+                            borderWidth: 2,
+                            fill: true,
+                            tension: 0.3,
+                            pointRadius: 3,
+                            pointHoverRadius: 5,
+                            pointBackgroundColor: '#2563eb'
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                backgroundColor: '#15181e',
+                                titleColor: '#fff',
+                                bodyColor: '#E5E7EB',
+                                borderColor: '#242831',
+                                borderWidth: 1,
+                                padding: 10
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: { display: false },
+                                ticks: { color: '#9CA3AF', font: { family: 'Inter', size: 10 } }
+                            },
+                            y: {
+                                grid: { color: '#242831' },
+                                ticks: { color: '#9CA3AF', font: { family: 'Inter', size: 10 }, stepSize: 5 }
+                            }
+                        }
+                    }
+                });
+            }
+        };
+    }
+</script>
+{% endblock %}

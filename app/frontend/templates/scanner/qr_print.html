@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Print Gym Card</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Exact CR80 standard ID Card Physical Printer Dimensions */
+        @page { size: 3.375in 2.125in; margin: 0; }
+        body { 
+            background: white; 
+            margin: 0; 
+            padding: 0; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            height: 100vh;
+            -webkit-print-color-adjust: exact !important; 
+            print-color-adjust: exact !important;
+        }
+        .print-card {
+            width: 3.375in;
+            height: 2.125in;
+            background: #ffffff;
+            border: 1px dashed #cccccc; 
+            display: flex;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+    </style>
+</head>
+<body onload="window.print()"> <!-- Instantly triggers standard OS Print Dialog -->
+
+    <div class="print-card flex flex-row">
+        <!-- Identity -->
+        <div class="w-1/2 h-full flex flex-col justify-center px-2">
+            <h1 class="text-sm font-black italic tracking-tighter uppercase leading-none">SPORT TIME</h1>
+            <p class="text-[8px] font-bold text-gray-500 mb-2">Member Authentication</p>
+            <p class="text-xs font-bold text-black uppercase mt-1">Valid Account</p>
+            <p class="text-[9px] text-black font-mono tracking-widest mt-0.5 border-t border-gray-300 pt-1">SECURE QR PASS</p>
+        </div>
+        
+        <!-- Generated Dynamic Code Base -->
+        <div class="w-1/2 h-full flex justify-center items-center">
+            <!-- This assumes a Jinja variable like {{ target_uuid }} gets mapped to a QR Generator. 
+                 Below uses public api strictly for prototyping display constraints -->
+            <img src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=example_qr_string" 
+                 class="h-[95%] w-auto object-contain border-[3px] border-black rounded" />
+        </div>
+    </div>
+
+</body>
+</html>
